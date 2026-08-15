@@ -1,0 +1,682 @@
+:root {
+    --bg: #101116;
+    --panel: #1b1d25;
+    --panel-2: #242733;
+    --text: #f3f3f5;
+    --muted: #a8abb7;
+    --accent: #9d7cff;
+    --accent-hover: #b094ff;
+    --highlight: #34baeb;
+    --danger: #d35f6f;
+    --border: #3a3d4b;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background:
+        radial-gradient(
+            circle at 50% 30%,
+            #1b1d2b 0%,
+            var(--bg) 55%
+        );
+
+    color: var(--text);
+
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    overflow: hidden;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    color: var(--text);
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+
+    background: var(--panel-2);
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s,
+        transform 0.08s,
+        border-color 0.15s;
+}
+
+button:hover {
+    background: #303342;
+    border-color: #55596b;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+button:disabled {
+    cursor: default;
+    
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+}
+
+/* =========================================================
+   MAIN SCREEN
+   ========================================================= */
+
+#mainScreen {
+    position: relative;
+
+    width: 100vw;
+    height: 100vh;
+}
+
+#characterButton {
+    position: absolute;
+
+    top: 18px;
+    left: 18px;
+
+    width: 58px;
+    height: 58px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    font-size: 28px;
+
+    background: var(--panel);
+
+    z-index: 5;
+}
+
+#rollMenu {
+    position: absolute;
+    left: 18px;
+    top: 96px;
+
+    width: 240px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.roll-button {
+    width: 100%;
+    min-height: 48px;
+
+    padding: 10px 14px;
+
+    text-align: left;
+
+    font-size: 16px;
+    font-weight: 650;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.roll-button span:first-child {
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.roll-button span:last-child {
+    flex-shrink: 0;
+
+    margin-left: 10px;
+}
+
+.roll-divider {
+    width: 100%;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 22px;
+}
+
+.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.danger {
+    border-color: var(--danger);
+}
+
+#tempHPDisplay {
+    color: var(--highlight);
+}
+
+#dexButton .rolls-title {
+    margin-bottom: 0;
+    font-size: 12px;
+    text-transform: none;
+}
+
+#spellControl {
+    display: flex;
+    justify-content: center;
+    align-items: end;
+    gap: 10px;
+}
+
+#spellControl strong {
+    color: var(--accent);
+}
+
+#schoolGrid {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 8px;
+
+    width: 100%;
+}
+
+#schoolGrid .roll-button {
+    width: 100%;
+}
+
+#characterSchoolGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 30px;
+
+    position: relative;
+}
+
+#characterSchoolGrid::after {
+    content: "";
+    position: absolute;
+
+    top: 0;
+    bottom: 0;
+    left: 50%;
+
+    width: 1px;
+
+    background: var(--border);
+}
+
+#characterSchoolGrid .modal-element {
+    margin: 0;
+}
+
+/* =========================================================
+   OVERLAY
+   ========================================================= */
+
+.overlay {
+    position: fixed;
+    inset: 0;
+
+    display: grid;
+    place-items: center;
+
+    z-index: 20;
+
+    padding: 20px;
+
+    background: rgba(0, 0, 0, 0.68);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.modal {
+    width: min(560px, 94vw);
+    max-height: 90vh;
+
+    overflow-y: auto;
+
+    padding: 22px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.modal h2 {
+    margin: 0 0 18px;
+
+    font-size: 22px;
+}
+
+.modal-input {
+    width: 100%;
+
+    padding: 8px 9px;
+
+    border: 1px solid var(--border);
+    border-radius: 7px;
+
+    background: #11131a;
+    color: var(--text);
+}
+
+.modal-input:disabled {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+.modal-element {
+    display: grid;
+
+    grid-template-columns: 1fr 110px;
+    margin: 8px 0;
+
+    align-items: center;
+}
+
+/* =========================================================
+   HEALTH POINTS
+   ========================================================= */
+
+#currentHP {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 8px;
+
+    margin: 20px 0 26px;
+
+    font-size: 18px;
+}
+
+#currentHP strong {
+    font-size: 32px;
+}
+
+#hpActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+/* =========================================================
+   ROLL D6
+   ========================================================= */
+
+#rollD6Actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+
+.results {
+    display: grid;
+
+    gap: 9px;
+
+    margin-top: 16px;
+}
+
+.result-row {
+    display: flex;
+
+    justify-content: space-between;
+
+    padding: 10px 12px;
+    margin: 10px 0;
+
+    background: #13151c;
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.result-label {
+    color: var(--muted);
+}
+
+.rolls {
+    margin-top: 15px;
+    padding: 12px;
+
+    background: #13151c;
+
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.rolls-title {
+    margin-bottom: 8px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+#individualRolls {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 7px;
+}
+
+.die {
+    width: 34px;
+    height: 34px;
+
+    display: grid;
+    place-items: center;
+
+    border: 1px solid #464a5a;
+    border-radius: 6px;
+
+    background: #2c2f3c;
+
+    font-weight: 700;
+}
+
+.die.high {
+    border-color: var(--accent);
+    color: #fff;
+}
+
+#resultActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+#spellSlotResultActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+#spellSlotIndividualRolls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+#tileSelectionGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+
+    margin-top: 14px;
+}
+
+#tileSelectionGrid label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 38px;
+
+    padding: 5px;
+
+    border: 1px solid var(--border);
+    border-radius: 7px;
+
+    background: var(--panel-2);
+
+    cursor: pointer;
+
+    font-weight: 700;
+}
+
+#tileSelectionGrid label:hover {
+    background: #303342;
+    border-color: #55596b;
+}
+
+#tileSelectionGrid input {
+    margin-right: 5px;
+}
+
+/* =========================================================
+   FULL-SCREEN 3D DICE
+   ========================================================= */
+
+.dice-overlay {
+    position: fixed;
+    inset: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    z-index: 9999;
+
+    overflow: hidden;
+
+    padding: 0;
+    margin: 0;
+
+    background: transparent;
+}
+
+#diceBox {
+    position: absolute;
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    pointer-events: none;
+}
+
+#diceBox canvas {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    display: block;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none;
+    max-height: none;
+}
+
+/* =========================================================
+   TILE CONTROLS
+   ========================================================= */
+
+#tileControls {
+    position: fixed;
+
+    top: 20px;
+    right: 20px;
+
+    z-index: 15;
+}
+
+#tileControls .roll-button {
+    margin: 8px 0;
+}
+
+#tileCountActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
+}
+
+/* =========================================================
+   SCRABBLE TILES
+   ========================================================= */
+
+#letterBoard {
+    position: fixed;
+    inset: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    z-index: 10;
+
+    pointer-events: none;
+
+    overflow: hidden;
+}
+
+.scrabble-letter {
+    position: absolute;
+
+    width: 48px;
+    height: 48px;
+
+    display: grid;
+    place-items: center;
+
+    border: 1px solid #8d7652;
+    border-radius: 5px;
+
+    background: linear-gradient(135deg, #d2dff0 0%, #c3c0eb 100%);
+
+    color: #302616;
+
+    font-family: Georgia, "Times New Roman", serif;
+
+    font-size: 27px;
+    font-weight: 700;
+
+    box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+
+    user-select: none;
+    -webkit-user-select: none;
+
+    cursor: grab;
+
+    pointer-events: auto;
+
+    touch-action: none;
+
+    transform: rotate(var(--rotation));
+
+    transition: box-shadow 0.12s, transform 0.12s;
+}
+
+.scrabble-letter.dragging {
+    cursor: grabbing;
+
+    z-index: 10000;
+
+    transform: rotate(0deg) scale(1.08);
+
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.scrabble-letter-value {
+    position: absolute;
+
+    right: 4px;
+    bottom: 2px;
+
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    line-height: 1;
+}
+
+/* =========================================================
+   SAFE ZONE
+   ========================================================= */
+
+#safeZone {
+    position: fixed;
+
+    right: 20px;
+    bottom: 20px;
+
+    width: 260px;
+    height: 180px;
+
+    display: grid;
+    place-items: center;
+
+    border: 2px dashed var(--accent);
+    border-radius: 14px;
+
+    background: rgba(157, 124, 255, 0.08);
+
+    color: var(--muted);
+
+    font-size: 13px;
+    font-weight: 700;
+
+    letter-spacing: 0.1em;
+
+    pointer-events: none;
+
+    z-index: 9;
+}
+
+#safeZone.active {
+    border-style: solid;
+
+    background: rgba(157, 124, 255, 0.18);
+
+    color: var(--text);
+}

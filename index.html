@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Spell: The RPG</title>
+        <link rel="icon" type="image/x-icon" href="./imgs/favicon.ico">
+        <link rel="stylesheet" type="text/css" href="./style.css">
+        <style>
+            .spell-slot-settings { display: grid; gap: 12px; margin: 10px 0 18px; }
+            .spell-slot-setting { display: grid; grid-template-columns: 1fr 1.4fr 60px 80px; gap: 8px; align-items: center; }
+            .spell-slot-disabled { color: var(--muted); opacity: 0.65; }
+            #tileSelectionGrid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 14px; }
+            #tileSelectionGrid label { min-height: 38px; display: grid; place-items: center; position: relative; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); cursor: pointer; font-weight: 700; user-select: none; }
+            #tileSelectionGrid label:hover { background: #303342; border-color: #55596b; }
+            #tileSelectionGrid input { position: absolute; opacity: 0; pointer-events: none; }
+            #tileSelectionGrid label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
+            @media (max-width: 520px) {
+                .spell-slot-setting { grid-template-columns: 1fr 1fr; }
+                #tileSelectionGrid { grid-template-columns: repeat(7, 1fr); }
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <!-- =====================================================
+            MAIN SCREEN
+        ===================================================== -->
+        <div id="mainScreen">
+            <button id="characterButton" aria-label="Open character settings" title="Character settings">🧙</button>
+
+            <div id="spellControl" class="roll-button hidden">
+                <div>
+                    <span>Level</span>
+                    <strong id="spellLevelDisplay">1</strong>
+                    <span>spell</span>
+                </div>
+
+                <div>
+                    <button id="spellEffectButton" class="primary">
+                        Roll effect
+                    </button>
+                </div>
+            </div>
+        
+            <div id="rollMenu">
+                <button id="hpManagerButton" class="roll-button">
+                    <span>HP</span>
+                    <span>
+                        <span id="hpCurrentDisplay">40</span>
+                        <span>/</span>
+                        <span id="hpMaxDisplay">40</span>
+                        <span id="tempHPDisplay"></span>
+                    </span>
+                </button>
+
+                <button id="acButton" class="roll-button" disabled>
+                    <span>AC</span>
+                    <span id="acDisplay">1</span>
+                </button>
+
+                <hr class="roll-divider">
+
+                <div id="schoolGrid">
+                    <button id="harmButton" class="roll-button">
+                        <span>Harm</span>
+                        <span id="harmDisplay">1</span>
+                    </button>
+
+                    <button id="aidButton" class="roll-button">
+                        <span>Aid</span>
+                        <span id="aidDisplay">1</span>
+                    </button>
+
+                    <button id="changeButton" class="roll-button">
+                        <span>Change</span>
+                        <span id="changeDisplay">1</span>
+                    </button>
+
+                    <button id="moveButton" class="roll-button">
+                        <span>Move</span>
+                        <span id="moveDisplay">1</span>
+                    </button>
+
+                    <button id="controlButton" class="roll-button">
+                        <span>Control</span>
+                        <span id="controlDisplay">1</span>
+                    </button>
+
+                    <button id="revealButton" class="roll-button">
+                        <span>Reveal</span>
+                        <span id="revealDisplay">1</span>
+                    </button>
+
+                    <button id="passionButton" class="roll-button">
+                        <span>Passion</span>
+                        <span id="passionDisplay">6</span>
+                    </button>
+
+                    <button id="createButton" class="roll-button">
+                        <span>Create</span>
+                        <span id="createDisplay">1</span>
+                    </button>
+                </div>
+
+                <hr class="roll-divider">
+
+                <button id="spellSlot1" class="roll-button">
+                    <span id="spellSlot1Name">Spell slot 1</span>
+                    <span id="spellSlot1Display">0</span>
+                </button>
+
+                <button id="spellSlot2" class="roll-button">
+                    <span id="spellSlot2Name">Spell slot 2</span>
+                    <span id="spellSlot2Display">0</span>
+                </button>
+
+                <button id="spellSlot3" class="roll-button">
+                    <span id="spellSlot3Name">Spell slot 3</span>
+                    <span id="spellSlot3Display">0</span>
+                </button>
+
+                <button id="spellSlot4" class="roll-button">
+                    <span id="spellSlot4Name">Spell slot 4</span>
+                    <span id="spellSlot4Display">0</span>
+                </button>
+
+                <hr class="roll-divider">
+
+                <button id="dexButton" class="roll-button">
+                    <span>Dexterity</span>
+                    <span class="rolls-title">(Initiative)</span>
+                </button>
+
+                <button id="rollD6Button" class="roll-button">
+                    <span>D6</span>
+                    <span></span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- =====================================================
+            LETTERS
+        ===================================================== -->
+
+        <div id="letterBoard" aria-label="Scrabble letters"></div>
+
+        <div id="safeZone">
+            <span>SAFE ZONE</span>
+        </div>
+
+        <div id="tileControls">
+            <button id="clearTilesButton" class="roll-button">
+                Clear Board
+            </button>
+
+            <button id="getTilesButton" class="roll-button">
+                Get Tiles
+            </button>
+
+            <button id="sortTilesButton" class="roll-button">
+                Sort Tiles
+            </button>
+        </div>
+
+        <!-- =====================================================
+            CHARACTER SETTINGS OVERLAY
+        ===================================================== -->
+        <div id="characterOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="characterTitle">
+                <h2 id="characterTitle">Character Settings</h2>
+
+                <hr class="roll-divider">
+
+                <div class="modal-element">
+                    <label for="maxHPInput">
+                        Max HP
+                    </label>
+
+                    <input class="modal-input" id="maxHPInput" type="number" min="1" step="1" value="40">
+                </div>
+
+                <div class="modal-element">
+                    <label for="acInput">
+                        AC
+                    </label>
+
+                    <input class="modal-input" id="acInput" type="number" min="1" step="1" value="40">
+                </div>
+                
+                <hr class="roll-divider">
+
+                <div id="characterSchoolGrid">
+                    <div class="modal-element">
+                        <label for="harmInput">Harm</label>
+                        <input class="modal-input" id="harmInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="aidInput">Aid</label>
+                        <input class="modal-input" id="aidInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="changeInput">Change</label>
+                        <input class="modal-input" id="changeInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="moveInput">Move</label>
+                        <input class="modal-input" id="moveInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="controlInput">Control</label>
+                        <input class="modal-input" id="controlInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="revealInput">Reveal</label>
+                        <input class="modal-input" id="revealInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="passionInput">Passion</label>
+                        <input class="modal-input" id="passionInput" type="number" value="6" disabled>
+                    </div>
+
+                    <div class="modal-element">
+                        <label for="createInput">Create</label>
+                        <input class="modal-input" id="createInput" type="number" min="1" max="6" step="1" value="1">
+                    </div>
+                </div>
+
+                <hr class="roll-divider">
+
+                <div class="spell-slot-settings">
+                    <div class="spell-slot-setting">
+                        <label for="spellSlot1NameInput">Slot 1 name</label>
+                        <input class="modal-input" id="spellSlot1NameInput" type="text" maxlength="40" value="Spell slot 1">
+                        <label for="spellSlot1LevelInput">Level</label>
+                        <input class="modal-input" id="spellSlot1LevelInput" type="number" min="0" max="6" step="1" value="0">
+                    </div>
+
+                    <div class="spell-slot-setting">
+                        <label for="spellSlot2NameInput">Slot 2 name</label>
+                        <input class="modal-input" id="spellSlot2NameInput" type="text" maxlength="40" value="Spell slot 2">
+                        <label for="spellSlot2LevelInput">Level</label>
+                        <input class="modal-input" id="spellSlot2LevelInput" type="number" min="0" max="6" step="1" value="0">
+                    </div>
+
+                    <div class="spell-slot-setting">
+                        <label for="spellSlot3NameInput">Slot 3 name</label>
+                        <input class="modal-input" id="spellSlot3NameInput" type="text" maxlength="40" value="Spell slot 3">
+                        <label for="spellSlot3LevelInput">Level</label>
+                        <input class="modal-input" id="spellSlot3LevelInput" type="number" min="0" max="6" step="1" value="0">
+                    </div>
+
+                    <div class="spell-slot-setting">
+                        <label for="spellSlot4NameInput">Slot 4 name</label>
+                        <input class="modal-input" id="spellSlot4NameInput" type="text" maxlength="40" value="Spell slot 4">
+                        <label for="spellSlot4LevelInput">Level</label>
+                        <input class="modal-input" id="spellSlot4LevelInput" type="number" min="0" max="6" step="1" value="0">
+                    </div>
+                </div>
+
+                <hr class="roll-divider">
+
+                <div class="modal-element">
+                    <label for="dexInput">
+                        Dexterity
+                    </label>
+
+                    <input class="modal-input" id="dexInput" type="number" min="1" max="20" step="1" value="10">
+                </div>
+
+                <div class="modal-element">
+                    <label for="initiativeDisplay">
+                        Initiative
+                    </label>
+
+                    <input class="modal-input" id="initiativeDisplay" type="text" value="+0" disabled>
+                </div>
+
+                <div class="actions">
+                    <button id="closeCharacter">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            HP MANAGER OVERLAY
+        ===================================================== -->
+        <div id="hpManagerOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hpTitle">
+                <h2 id="hpTitle">Hit Points</h2>
+                
+                <hr class="roll-divider">
+
+                <div id="currentHP">
+                    <span>Current HP</span>
+
+                    <strong id="hpModalCurrent">40</strong>
+                    <span>/</span>
+                    <strong id="hpModalMax">40</strong>
+                </div>
+
+                <div class="modal-element">
+                    <label for="healthAmountInput">
+                        Amount
+                    </label>
+
+                    <input class="modal-input" id="healthAmountInput" type="number" min="1" step="1" value="1">
+                </div>
+
+                <div id="hpActions">
+                    <button id="damageHPButton" class="danger">
+                        Damage
+                    </button>
+
+                    <button id="healHPButton" class="primary">
+                        Heal
+                    </button>
+                </div>
+
+                <div class="modal-element">
+                    <label for="tempHPInput">
+                        Temporary HP
+                    </label>
+
+                    <input class="modal-input" id="tempHPInput" type="number" min="0" step="1" value="0">
+                </div>
+
+                <div class="actions">
+                    <button id="closeHPManager">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            SCHOOL RESULT OVERLAY
+        ===================================================== -->
+        <div id="schoolResultOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="schoolResultTitle">
+                <h2 id="schoolResultTitle">Result</h2>
+                
+                <hr class="roll-divider">
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Highest roll
+                    </span>
+
+                    <strong id="highestRoll"></strong>
+                </div>
+
+                <div id="spellLevelResult" class="result-row">
+                    <span class="result-label">
+                        Spell level
+                    </span>
+
+                    <strong id="spellLevel"></strong>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Total sum
+                    </span>
+
+                    <strong id="totalSum"></strong>
+                </div>
+                
+                <hr class="roll-divider">
+
+                <div class="rolls">
+                    <div class="rolls-title">
+                        Individual rolls
+                    </div>
+
+                    <div id="individualRolls"></div>
+                </div>
+
+                <div id="resultActions">
+                    <button id="castSchoolResult" class="primary">
+                        Cast
+                    </button>
+
+                    <button id="closeSchoolResult" class="danger">
+                        Cancel
+                    </button>
+                </div>
+
+                <div id="resultBackButton" class="actions hidden">
+                    <button id="closeResults">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            SPELL SLOT OVERLAY
+        ===================================================== -->
+        <div id="spellSlotResultOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="spellSlotResultTitle">
+                <h2 id="spellSlotResultTitle">Result</h2>
+                
+                <hr class="roll-divider">
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Highest roll
+                    </span>
+
+                    <strong id="spellSlotHighestRoll"></strong>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Total sum
+                    </span>
+
+                    <strong id="spellSlotTotalSum"></strong>
+                </div>
+                
+                <hr class="roll-divider">
+
+                <div class="rolls">
+                    <div class="rolls-title">
+                        Individual rolls
+                    </div>
+
+                    <div id="spellSlotIndividualRolls"></div>
+                </div>
+
+                <div id="spellSlotResultActions">
+                    <button id="successButton" class="primary">
+                        Success
+                    </button>
+
+                    <button id="failButton" class="danger">
+                        Fail
+                    </button>
+                </div>
+
+                <div id="spellSlotBackButton" class="actions hidden">
+                    <button id="closeResults">Close</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- =====================================================
+            SPELL SLOT LEVEL-UP RESULT OVERLAY
+        ===================================================== -->
+        <div id="spellSlotSuccessResultOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="spellSlotSuccessResultTitle">
+                <h2 id="spellSlotSuccessResultTitle">Spell Slot Result</h2>
+                <hr class="roll-divider">
+                <div class="result-row">
+                    <span class="result-label">d6 roll</span>
+                    <strong id="spellSlotLevelUpRoll"></strong>
+                </div>
+                <div class="result-row">
+                    <span class="result-label">Level</span>
+                    <strong id="spellSlotLevelStatus"></strong>
+                </div>
+                <div class="actions">
+                    <button id="closeSpellSlotResult">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            GET TILES OVERLAY
+        ===================================================== -->
+        <div id="tileCountOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tileCountTitle">
+                <h2 id="tileCountTitle">Get Tiles</h2>
+
+                <hr class="roll-divider">
+
+                <div class="modal-element">
+                    <label for="tileCountInput">
+                        Amount
+                    </label>
+
+                    <input class="modal-input" id="tileCountInput" type="number" min="1" step="1" value="1">
+                </div>
+
+                <div id="tileSelectionGrid" aria-label="Choose specific tiles">
+                    <label><input type="checkbox" value="A"><span>A</span></label>
+                    <label><input type="checkbox" value="B"><span>B</span></label>
+                    <label><input type="checkbox" value="C"><span>C</span></label>
+                    <label><input type="checkbox" value="D"><span>D</span></label>
+                    <label><input type="checkbox" value="E"><span>E</span></label>
+                    <label><input type="checkbox" value="F"><span>F</span></label>
+                    <label><input type="checkbox" value="G"><span>G</span></label>
+                    <label><input type="checkbox" value="H"><span>H</span></label>
+                    <label><input type="checkbox" value="I"><span>I</span></label>
+                    <label><input type="checkbox" value="J"><span>J</span></label>
+                    <label><input type="checkbox" value="K"><span>K</span></label>
+                    <label><input type="checkbox" value="L"><span>L</span></label>
+                    <label><input type="checkbox" value="M"><span>M</span></label>
+                    <label><input type="checkbox" value="N"><span>N</span></label>
+                    <label><input type="checkbox" value="O"><span>O</span></label>
+                    <label><input type="checkbox" value="P"><span>P</span></label>
+                    <label><input type="checkbox" value="Q"><span>Q</span></label>
+                    <label><input type="checkbox" value="R"><span>R</span></label>
+                    <label><input type="checkbox" value="S"><span>S</span></label>
+                    <label><input type="checkbox" value="T"><span>T</span></label>
+                    <label><input type="checkbox" value="U"><span>U</span></label>
+                    <label><input type="checkbox" value="V"><span>V</span></label>
+                    <label><input type="checkbox" value="W"><span>W</span></label>
+                    <label><input type="checkbox" value="X"><span>X</span></label>
+                    <label><input type="checkbox" value="Y"><span>Y</span></label>
+                    <label><input type="checkbox" value="Z"><span>Z</span></label>
+                    <label><input type="checkbox" value="_"><span>_</span></label>
+                </div>
+
+                <div id="tileCountActions">
+                    <button id="getTiles" class="primary">
+                        Get tiles
+                    </button>
+
+                    <button id="cancelTiles" class="danger">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- =====================================================
+            ROLL D6 OVERLAY
+        ===================================================== -->
+        <div id="rollD6Overlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rollD6Title">
+                <h2 id="rollD6Title">Roll d6</h2>
+
+                <hr class="roll-divider">
+
+                <div class="modal-element">
+                    <label for="rollD6Input">
+                        Amount
+                    </label>
+
+                    <input class="modal-input" id="rollD6Input" type="number" min="1" step="1" value="1">
+                </div>
+
+                <div id="rollD6Actions">
+                    <button id="rollD6" class="primary">
+                        Roll
+                    </button>
+
+                    <button id="cancelD6" class="danger">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- =====================================================
+            DEXTERITY RESULT OVERLAY
+        ===================================================== -->
+        <div id="dexResultOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dexResultTitle">
+                <h2 id="dexResultTitle">Dexterity Result</h2>
+
+                <hr class="roll-divider">
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Roll
+                    </span>
+
+                    <strong id="rawRollDisplay">15</strong>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Modifier
+                    </span>
+
+                    <strong id="modifierDisplay">+2</strong>
+                </div>
+
+                <div class="result-row">
+                    <span class="result-label">
+                        Result
+                    </span>
+
+                    <strong id="dexResultDisplay">17</strong>
+                </div>
+
+                <div class="actions">
+                    <button id="closeDexResult">Close</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- =====================================================
+            DICE
+        ===================================================== -->
+        <div id="animationOverlay" class="dice-overlay hidden">
+            <div id="diceBox"></div>
+        </div>
+        
+        <script type="module" src="./app.js"></script>
+    </body>
+</html>
