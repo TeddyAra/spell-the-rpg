@@ -1494,21 +1494,6 @@ if (rollD6) {
     )
 }
 
-if (castSchoolResult) {
-    castSchoolResult.addEventListener(
-        "click",
-        event => {
-            const total = Number(
-                $("totalSum")?.textContent
-            ) || 0;
-
-            spawnScrabbleLetters(total);
-
-            closeSchoolResult();
-        }
-    );
-}
-
 /*
  * =========================================================
  * DEXTERITY RESULT OVERLAY
