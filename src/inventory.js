@@ -1,6 +1,6 @@
-import { $, show, hide, clamp } from "./dom.js";
+import { $, show, hide, clamp, element } from "./dom.js";
 import { state, saveState, effectiveMaxHealth } from "./state.js";
-import { ITEM_TYPES, ELIXIR_TURNS } from "./items.js";
+import { ITEM_TYPES, ELIXIR_TURNS, itemName } from "./items.js";
 import { rollDice } from "./dice.js";
 import { showInfoResult } from "./results.js";
 import { updateCurrentHealth, renderCharacter } from "./character.js";
@@ -15,12 +15,6 @@ const endTurnButton = $("endTurnButton");
 
 // Amount typed with "BBO", kept while the player picks which oil it is.
 let pendingBoggleOilAmount = 1;
-
-function itemName(item) {
-    const name = ITEM_TYPES[item.code].name;
-
-    return item.variant ? `${name} (${item.variant})` : name;
-}
 
 function removeItem(item) {
     state.inventory = state.inventory.filter(entry => entry !== item);
@@ -230,20 +224,6 @@ endTurnButton.addEventListener("click", () => {
  * RENDERING
  * =========================================================
  */
-
-function element(tag, className, text) {
-    const node = document.createElement(tag);
-
-    if (className) {
-        node.className = className;
-    }
-
-    if (text !== undefined) {
-        node.textContent = text;
-    }
-
-    return node;
-}
 
 function countRow(label, value) {
     const row = element("div", "item-count");

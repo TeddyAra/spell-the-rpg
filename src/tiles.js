@@ -1,4 +1,5 @@
 import { $, show, hide } from "./dom.js";
+import { TILE_BOARD_STORAGE_KEY } from "./state.js";
 
 // Letter → [number of tiles in the bag, points]
 const SCRABBLE_LETTERS = {
@@ -42,6 +43,24 @@ const letterBoard = $("letterBoard");
 const safeZone = $("safeZone");
 
 let scrabbleTileZIndex = 20;
+
+/*
+ * The shared map (another tab) shows the DM what each player is spelling,
+ * so the board's layout is saved whenever tiles appear, move or disappear.
+ */
+function publishBoard() {
+    const tiles = allTiles().map(tile => ({
+        letter: tile.dataset.letter,
+        x: parseFloat(tile.style.left) + TILE_SIZE / 2,
+        y: parseFloat(tile.style.top) + TILE_SIZE / 2
+    }));
+
+    try {
+        localStorage.setItem(TILE_BOARD_STORAGE_KEY, JSON.stringify({ tileSize: TILE_SIZE, tiles }));
+    } catch {
+        // Only the DM's overview misses out
+    }
+}
 
 function randomScrabbleLetter() {
     return scrabblePool[Math.floor(Math.random() * scrabblePool.length)];
@@ -96,6 +115,8 @@ function spawnLetters(letters) {
     letters.forEach(createScrabbleLetter);
 
     scrabbleTileZIndex += letters.length;
+
+    publishBoard();
 }
 
 export function spawnScrabbleLetters(amount) {
@@ -158,6 +179,8 @@ function makeScrabbleTileDraggable(tile) {
         document.removeEventListener("pointercancel", stopDragging);
 
         safeZone.classList.remove("active");
+
+        publishBoard();
     }
 
     tile.addEventListener("pointerdown", event => {
@@ -225,6 +248,8 @@ function clearTilesOutsideSafeZone() {
 
     // Clearing the board also ends the spell that was cast.
     hide($("spellControl"));
+
+    publishBoard();
 }
 
 /* Scatters a group of tiles randomly within `area`. */
@@ -285,9 +310,14 @@ function sortTiles() {
         width: width * 0.15,
         height: height * 0.1
     });
+
+    publishBoard();
 }
 
 $("clearTilesButton").addEventListener("click", clearTilesOutsideSafeZone);
+
+// Tiles aren't kept when the page reloads, so start with an empty board
+publishBoard();
 $("sortTilesButton").addEventListener("click", sortTiles);
 
 /*

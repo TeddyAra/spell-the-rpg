@@ -89,3 +89,10 @@ export const ITEM_TYPES = {
 };
 
 export const ELIXIR_TURNS = 4;
+
+/* "Bottle of Boggle Oil (Sticky)" for items with a variant, otherwise just the name. */
+export function itemName(item) {
+    const name = ITEM_TYPES[item.code].name;
+
+    return item.variant ? `${name} (${item.variant})` : name;
+}

@@ -14,3 +14,8 @@ dist/
 .idea/
 .DS_Store
 Thumbs.db
+# Old PNG export of the map (34 MB), replaced by the VTT file in /maps/
+imgs/BlueAlleyMapV2PNG.png
+
+# DM map files. Never publish them: the DM loads them in the browser, and players only see revealed squares
+/maps/

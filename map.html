@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Spell: The RPG · Map</title>
+        <link rel="icon" type="image/x-icon" href="./imgs/favicon.ico">
+        <link rel="stylesheet" href="./src/style.css">
+        <link rel="stylesheet" href="./src/map/map.css">
+    </head>
+
+    <body class="panel-open">
+
+        <!-- =====================================================
+            MAP
+        ===================================================== -->
+        <div id="mapViewport">
+            <div id="mapWorld">
+                <!-- DM: the whole map. Players: only the revealed parts the DM sends them -->
+                <div id="mapLayer"></div>
+                <!-- DM: dims the squares players can't see -->
+                <canvas id="fogCanvas" width="0" height="0"></canvas>
+                <div id="gridOverlay"></div>
+                <!-- The DM's drawings -->
+                <svg id="drawLayer" width="1" height="1" aria-hidden="true"></svg>
+                <div id="selectionBox" class="hidden"></div>
+                <div id="tokenLayer"></div>
+            </div>
+        </div>
+
+        <div id="roomBar" class="hidden">
+            <span>Room <strong id="roomCode"></strong></span>
+            <button id="copyRoomCode">Copy</button>
+            <span id="roomStatus" data-kind="connecting"></span>
+            <button id="leaveRoom">Leave</button>
+        </div>
+
+        <div id="mapControls">
+            <button id="zoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+            <button id="zoomOut" aria-label="Zoom out" title="Zoom out">−</button>
+            <button id="toggleGrid" title="Show or hide the grid">Grid</button>
+            <button id="togglePanel">Hide players</button>
+
+            <!-- DM only -->
+            <div id="dmTools" class="hidden">
+                <button data-tool="reveal" title="Drag over squares to show them to the players">Reveal</button>
+                <button data-tool="hide" title="Drag over squares to hide them again">Hide</button>
+                <button data-tool="enemy" title="Click a square to place an enemy">Enemy</button>
+                <button data-tool="draw" title="Draw lines everyone can see">Draw</button>
+                <button data-tool="erase" title="Drag over lines to erase them">Erase</button>
+
+                <div id="drawOptions" class="hidden">
+                    <div id="colorSwatches"></div>
+                    <button id="clearDrawings" title="Erase all drawings">Clear</button>
+                </div>
+            </div>
+
+            <span id="mapHint" class="map-hint">Hold Shift to snap to the grid</span>
+        </div>
+
+        <!-- =====================================================
+            PLAYERS OVERVIEW
+        ===================================================== -->
+        <aside id="playersPanel" aria-label="Players">
+            <h2>Players</h2>
+
+            <div id="playerList"></div>
+        </aside>
+
+        <!-- =====================================================
+            LOBBY
+        ===================================================== -->
+        <div id="lobbyOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lobbyTitle">
+                <h2 id="lobbyTitle">Play together</h2>
+
+                <hr class="roll-divider">
+
+                <div class="modal-element">
+                    <label for="playerNameInput">Your name</label>
+                    <input class="modal-input" id="playerNameInput" type="text" maxlength="30" spellcheck="false">
+                </div>
+
+                <div class="button-pair">
+                    <button id="hostButton" class="primary">Host as DM</button>
+                    <button id="chooseMapButton" type="button">Choose map file</button>
+                </div>
+
+                <input id="mapFileInput" type="file" accept=".dd2vtt,.uvtt,.df2vtt" hidden>
+                <button id="rehostButton" class="hidden"></button>
+
+                <hr class="roll-divider">
+
+                <form id="joinForm" autocomplete="off">
+                    <label for="roomCodeInput">Room code</label>
+                    <input class="modal-input" id="roomCodeInput" type="text" maxlength="10" spellcheck="false">
+                    <button type="submit" class="primary">Join</button>
+                </form>
+
+                <p id="lobbyMessage" class="result-label"></p>
+            </div>
+        </div>
+
+        <script type="module" src="./src/map/main.js"></script>
+    </body>
+</html>

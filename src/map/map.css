@@ -1,0 +1,678 @@
+/* =========================================================
+   MAP PAGE (uses the colours and components from style.css)
+   ========================================================= */
+
+:root {
+    --panel-width: 320px;
+
+    /* Same as the map's own background, so the map's edges and hidden squares blend in */
+    --map-background: #12141a;
+}
+
+body {
+    background: var(--map-background);
+}
+
+#mapViewport {
+    position: fixed;
+    inset: 0;
+
+    overflow: hidden;
+
+    background: var(--map-background);
+
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+#mapViewport:active {
+    cursor: grabbing;
+}
+
+body.panel-open #mapViewport {
+    right: var(--panel-width);
+}
+
+#mapWorld {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    transform-origin: 0 0;
+}
+
+#mapWorld.animating {
+    transition: transform 0.3s ease;
+}
+
+#mapLayer,
+#gridOverlay,
+#tokenLayer {
+    position: absolute;
+    inset: 0;
+}
+
+#mapLayer,
+#fogCanvas,
+#gridOverlay,
+#drawLayer,
+#selectionBox {
+    pointer-events: none;
+}
+
+/* Each layer stacks on its own */
+#mapLayer {
+    z-index: 0;
+}
+
+#fogCanvas {
+    z-index: 1;
+}
+
+#gridOverlay {
+    z-index: 2;
+}
+
+#drawLayer {
+    z-index: 3;
+}
+
+#selectionBox {
+    z-index: 4;
+}
+
+#tokenLayer {
+    z-index: 5;
+}
+
+/* The DM's drawings (lines can go anywhere, so nothing is clipped) */
+#drawLayer {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    overflow: visible;
+}
+
+#drawLayer path {
+    fill: none;
+
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* The DM's whole map */
+.dm-map {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    user-select: none;
+}
+
+/* DM: hidden squares are dimmed, one canvas pixel per grid square */
+#fogCanvas {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    opacity: 0.6;
+
+    image-rendering: pixelated;
+}
+
+/* Players: a revealed piece of the map (hidden squares are transparent) */
+.map-block {
+    position: absolute;
+}
+
+.map-block img {
+    position: absolute;
+    inset: 0;
+
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    user-select: none;
+}
+
+/* Grid lines stay one screen pixel wide at any zoom */
+#gridOverlay,
+.block-grid {
+    display: none;
+
+    --line: calc(1px / var(--zoom));
+
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.35) var(--line), transparent var(--line)),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.35) var(--line), transparent var(--line));
+    background-size: var(--grid-size) var(--grid-size);
+}
+
+/* Players' grid only covers revealed squares (the piece's picture is its mask) */
+.block-grid {
+    position: absolute;
+    inset: 0;
+
+    mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
+}
+
+#mapWorld.dm.show-grid #gridOverlay,
+#mapWorld.show-grid .block-grid {
+    display: block;
+}
+
+/* The box the DM is drawing */
+#selectionBox {
+    position: absolute;
+
+    border: calc(3px / var(--zoom)) solid #4fbf73;
+
+    background: rgba(79, 191, 115, 0.2);
+}
+
+#selectionBox[data-mode="hide"] {
+    border-color: var(--danger);
+
+    background: rgba(211, 95, 111, 0.25);
+}
+
+#mapViewport[data-tool="reveal"],
+#mapViewport[data-tool="hide"],
+#mapViewport[data-tool="draw"],
+#mapViewport[data-tool="erase"] {
+    cursor: crosshair;
+}
+
+#mapViewport[data-tool="enemy"] {
+    cursor: copy;
+}
+
+/* =========================================================
+   TOKENS (sized in map pixels; a grid square is 128)
+   ========================================================= */
+
+.token {
+    position: absolute;
+
+    width: 92px;
+    height: 92px;
+
+    display: grid;
+    place-items: center;
+
+    transform: translate(-50%, -50%);
+
+    border: 6px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+
+    background: var(--token-color);
+
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+
+    cursor: grab;
+}
+
+.token img {
+    width: 70%;
+    height: 70%;
+
+    pointer-events: none;
+}
+
+.token.mine {
+    border-color: #fff;
+    box-shadow: 0 0 0 8px var(--accent), 0 8px 20px rgba(0, 0, 0, 0.55);
+}
+
+.token.offline {
+    opacity: 0.45;
+}
+
+.token.enemy {
+    --token-color: #8f2231;
+
+    border-color: #1c0b0f;
+}
+
+/* Players can't move enemies */
+.token.enemy:not(:has(.token-remove)) {
+    cursor: default;
+}
+
+/* DM: remove an enemy (shown on hover); sized in screen pixels */
+.token-remove {
+    position: absolute;
+
+    top: 0;
+    right: 0;
+
+    width: calc(22px / var(--zoom));
+    height: calc(22px / var(--zoom));
+
+    display: none;
+    place-items: center;
+
+    padding: 0;
+
+    transform: translate(35%, -35%);
+
+    border: none;
+    border-radius: 50%;
+
+    background: var(--danger);
+
+    color: #fff;
+
+    font-size: calc(15px / var(--zoom));
+    line-height: 1;
+}
+
+.token:hover .token-remove {
+    display: grid;
+}
+
+.token.dragging .token-remove {
+    display: none;
+}
+
+.token.dragging {
+    z-index: 1;
+
+    cursor: grabbing;
+
+    box-shadow: 0 0 0 8px var(--accent), 0 20px 44px rgba(0, 0, 0, 0.65);
+}
+
+/* The name stays the same size on screen at any zoom level */
+.token-name {
+    position: absolute;
+
+    top: 100%;
+    left: 50%;
+
+    margin-top: calc(4px / var(--zoom));
+    padding: calc(2px / var(--zoom)) calc(6px / var(--zoom));
+
+    transform: translateX(-50%);
+
+    border-radius: calc(4px / var(--zoom));
+
+    background: rgba(0, 0, 0, 0.7);
+
+    color: #fff;
+
+    font-size: calc(12px / var(--zoom));
+    font-weight: 700;
+    white-space: nowrap;
+
+    pointer-events: none;
+}
+
+/* =========================================================
+   ROOM BAR AND MAP CONTROLS
+   ========================================================= */
+
+#roomBar,
+#mapControls {
+    position: fixed;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    padding: 8px 10px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+
+    z-index: 5;
+}
+
+#roomBar {
+    top: 16px;
+    left: 16px;
+}
+
+#roomCode {
+    letter-spacing: 0.1em;
+}
+
+#roomBar button,
+#mapControls button {
+    min-width: 36px;
+
+    padding: 6px 10px;
+}
+
+#roomStatus {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    color: var(--muted);
+    font-size: 14px;
+}
+
+#roomStatus::before {
+    content: "";
+
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #e0a526;
+}
+
+#roomStatus[data-kind="connected"]::before {
+    background: #4fbf73;
+}
+
+#roomStatus[data-kind="error"]::before {
+    background: var(--danger);
+}
+
+#mapControls {
+    left: 16px;
+    bottom: 16px;
+}
+
+.map-hint {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+#dmTools,
+#drawOptions,
+#colorSwatches {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#dmTools {
+    padding-left: 10px;
+
+    border-left: 1px solid var(--border);
+}
+
+#dmTools .hidden {
+    display: none;
+}
+
+#drawOptions {
+    padding-left: 8px;
+
+    border-left: 1px solid var(--border);
+}
+
+#mapControls .color-swatch {
+    width: 22px;
+    min-width: 0;
+    height: 22px;
+
+    padding: 0;
+
+    border: 2px solid transparent;
+    border-radius: 50%;
+
+    box-shadow: 0 0 0 1px var(--border);
+}
+
+#mapControls .color-swatch.selected {
+    border-color: var(--panel);
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* =========================================================
+   PLAYERS PANEL
+   ========================================================= */
+
+#playersPanel {
+    position: fixed;
+
+    top: 0;
+    right: 0;
+    bottom: 0;
+
+    width: var(--panel-width);
+
+    display: none;
+    flex-direction: column;
+
+    padding: 16px;
+
+    overflow-y: auto;
+
+    background: var(--panel);
+
+    border-left: 1px solid var(--border);
+}
+
+body.panel-open #playersPanel {
+    display: flex;
+}
+
+#playersPanel h2 {
+    margin: 0 0 12px;
+
+    font-size: 20px;
+}
+
+#playerList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.player-card {
+    padding: 12px;
+
+    background: #13151c;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.player-card.offline {
+    opacity: 0.6;
+}
+
+.player-header {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-bottom: 10px;
+    padding: 0;
+
+    border: none;
+
+    background: none;
+
+    text-align: left;
+}
+
+.player-header:hover {
+    background: none;
+}
+
+.player-header:hover .player-name {
+    text-decoration: underline;
+}
+
+.player-dot {
+    flex-shrink: 0;
+
+    width: 12px;
+    height: 12px;
+
+    border-radius: 50%;
+}
+
+.player-name {
+    flex: 1;
+    min-width: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.health-bar {
+    position: relative;
+
+    height: 24px;
+
+    overflow: hidden;
+
+    background: #2a1a1f;
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.health-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+
+    background: linear-gradient(90deg, #a8364a, #d35f6f);
+}
+
+.health-label {
+    position: relative;
+
+    padding: 3px 8px;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.overview-stats,
+.overview-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.overview-stats {
+    margin-top: 8px;
+}
+
+.overview-section {
+    margin-top: 10px;
+}
+
+.overview-section .rolls-title {
+    margin-bottom: 5px;
+}
+
+.overview-chip {
+    padding: 2px 8px;
+
+    background: var(--panel-2);
+
+    border: 1px solid var(--border);
+    border-radius: 999px;
+
+    font-size: 12px;
+}
+
+.overview-chip.muted {
+    color: var(--muted);
+    opacity: 0.6;
+}
+
+.overview-chip.active {
+    border-color: var(--accent);
+    color: #fff;
+}
+
+/* A word spelled with letter tiles */
+.overview-chip.word {
+    padding: 3px 10px;
+
+    background: linear-gradient(135deg, #d2dff0 0%, #c3c0eb 100%);
+
+    border-color: #8d7652;
+    border-radius: 5px;
+
+    color: #302616;
+
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.loose-letters {
+    align-self: center;
+
+    font-size: 12px;
+}
+
+/* =========================================================
+   LOBBY
+   ========================================================= */
+
+#lobbyMessage {
+    min-height: 1.2em;
+    margin: 12px 0 0;
+
+    font-size: 14px;
+}
+
+#chooseMapButton {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#rehostButton {
+    width: 100%;
+
+    margin-top: 10px;
+    padding: 9px 16px;
+}
+
+#joinForm {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+
+    align-items: center;
+}
+
+#joinForm button,
+#lobbyOverlay .button-pair button {
+    padding: 9px 16px;
+}
+
+#roomCodeInput {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+@media (max-width: 700px) {
+    :root {
+        --panel-width: 100vw;
+    }
+}

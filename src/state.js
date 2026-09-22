@@ -104,7 +104,10 @@ function normalizeSpellSlots() {
  * =========================================================
  */
 
-const STATE_STORAGE_KEY = "myGameState";
+export const STATE_STORAGE_KEY = "myGameState";
+
+// Layout of the letter tiles, saved by tiles.js for the shared map (see map/summary.js)
+export const TILE_BOARD_STORAGE_KEY = "spellTileBoard";
 
 export function saveState() {
     localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(state));

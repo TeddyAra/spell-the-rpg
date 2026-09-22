@@ -10,6 +10,21 @@ export function hide(element) {
 
 export const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
+/* Creates an element with an optional class and text. */
+export function element(tag, className, text) {
+    const node = document.createElement(tag);
+
+    if (className) {
+        node.className = className;
+    }
+
+    if (text !== undefined) {
+        node.textContent = text;
+    }
+
+    return node;
+}
+
 export function formatModifier(value) {
     return value >= 0 ? `+${value}` : String(value);
 }

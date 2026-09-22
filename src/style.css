@@ -171,6 +171,20 @@ button:disabled {
     left: 86px;
 }
 
+#mapButton {
+    left: 154px;
+}
+
+.icon-button svg {
+    width: 30px;
+    height: 30px;
+
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+
 #rollMenu {
     position: absolute;
     left: 18px;
