@@ -76,9 +76,50 @@ button:active {
 
 button:disabled {
     cursor: default;
-    
+
     border: 1px solid var(--border);
     background: var(--panel-2);
+}
+
+.hidden {
+    display: none !important;
+}
+
+.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.danger {
+    border-color: var(--danger);
+}
+
+.roll-divider {
+    width: 100%;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    margin-top: 22px;
+}
+
+/* Two side-by-side buttons, e.g. Damage / Heal or Cast / Cancel */
+.button-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+
+    margin-top: 16px;
 }
 
 /* =========================================================
@@ -92,11 +133,10 @@ button:disabled {
     height: 100vh;
 }
 
-#characterButton {
+.icon-button {
     position: absolute;
 
     top: 18px;
-    left: 18px;
 
     width: 58px;
     height: 58px;
@@ -104,13 +144,31 @@ button:disabled {
     display: grid;
     place-items: center;
 
-    border-radius: 50%;
+    padding: 0;
 
-    font-size: 28px;
+    border-radius: 50%;
 
     background: var(--panel);
 
     z-index: 5;
+}
+
+.icon-button img {
+    display: block;
+
+    width: 34px;
+    height: 34px;
+
+    pointer-events: none;
+    user-select: none;
+}
+
+#characterButton {
+    left: 18px;
+}
+
+#inventoryButton {
+    left: 86px;
 }
 
 #rollMenu {
@@ -118,11 +176,18 @@ button:disabled {
     left: 18px;
     top: 96px;
 
-    width: 240px;
+    width: 280px;
+
+    /* On short screens the menu scrolls rather than being cut off */
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    scrollbar-width: none;
 
     display: flex;
     flex-direction: column;
     gap: 8px;
+
+    padding-bottom: 18px;
 }
 
 .roll-button {
@@ -141,6 +206,15 @@ button:disabled {
     justify-content: space-between;
 }
 
+/* Slightly shorter buttons in the left menu so it fits on a 1080p screen */
+#rollMenu .roll-button,
+#endTurnButton {
+    min-height: 42px;
+
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
 .roll-button span:first-child {
     min-width: 0;
 
@@ -155,42 +229,14 @@ button:disabled {
     margin-left: 10px;
 }
 
-.roll-divider {
-    width: 100%;
-}
-
-.actions {
-    display: flex;
-    justify-content: flex-end;
-
-    gap: 10px;
-
-    margin-top: 22px;
-}
-
-.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-}
-
-.primary:hover {
-    background: var(--accent-hover);
-    border-color: var(--accent-hover);
-}
-
-.danger {
-    border-color: var(--danger);
+/* A spell slot at level 0, or a magic school lowered to 0 by the Red Gem Ring */
+.roll-disabled {
+    color: var(--muted);
+    opacity: 0.65;
 }
 
 #tempHPDisplay {
     color: var(--highlight);
-}
-
-#dexButton .rolls-title {
-    margin-bottom: 0;
-    font-size: 12px;
-    text-transform: none;
 }
 
 #spellControl {
@@ -200,47 +246,72 @@ button:disabled {
     gap: 10px;
 }
 
+/* It borrows .roll-button's look, but not the gap it puts before a button's last span */
+#spellControl span:last-child {
+    margin-left: 0;
+}
+
 #spellControl strong {
     color: var(--accent);
 }
 
-#schoolGrid {
-    display: grid;
-
-    grid-template-columns: 1fr 1fr;
-
+#spellButtons {
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-
-    width: 100%;
 }
 
-#schoolGrid .roll-button {
-    width: 100%;
-}
+/* =========================================================
+   DICE
+   ========================================================= */
 
-#characterSchoolGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 30px;
-
+.dice-cell {
     position: relative;
 }
 
-#characterSchoolGrid::after {
-    content: "";
+/* Hovering a die shows quick-roll buttons for 1–6 dice in the right part of its button */
+.quick-roll {
     position: absolute;
 
-    top: 0;
-    bottom: 0;
-    left: 50%;
+    top: 4px;
+    right: 5px;
+    bottom: 4px;
 
-    width: 1px;
+    width: 66px;
 
-    background: var(--border);
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
 }
 
-#characterSchoolGrid .modal-element {
-    margin: 0;
+.dice-cell:hover .quick-roll,
+.quick-roll:focus-within {
+    display: grid;
+}
+
+.quick-roll button {
+    padding: 0;
+
+    font-size: 11px;
+
+    background: var(--panel);
+
+    border-radius: 5px;
+
+    font-weight: 700;
+}
+
+.quick-roll button:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+/* Buttons in two columns: AC / Initiative, schools, dice */
+.two-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* equal columns, even with long names */
+    gap: 8px;
 }
 
 /* =========================================================
@@ -259,10 +330,6 @@ button:disabled {
     padding: 20px;
 
     background: rgba(0, 0, 0, 0.68);
-}
-
-.hidden {
-    display: none !important;
 }
 
 .modal {
@@ -299,6 +366,12 @@ button:disabled {
     color: var(--text);
 }
 
+.modal-input:focus {
+    outline: none;
+
+    border-color: var(--accent);
+}
+
 .modal-input:disabled {
     color: var(--muted);
     opacity: 0.7;
@@ -309,6 +382,50 @@ button:disabled {
 
     grid-template-columns: 1fr 110px;
     margin: 8px 0;
+
+    align-items: center;
+}
+
+/* =========================================================
+   CHARACTER SETTINGS
+   ========================================================= */
+
+#characterSchoolGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 30px;
+
+    position: relative;
+}
+
+#characterSchoolGrid::after {
+    content: "";
+    position: absolute;
+
+    top: 0;
+    bottom: 0;
+    left: 50%;
+
+    width: 1px;
+
+    background: var(--border);
+}
+
+#characterSchoolGrid .modal-element {
+    margin: 0;
+}
+
+.spell-slot-settings {
+    display: grid;
+    gap: 12px;
+
+    margin: 10px 0 18px;
+}
+
+.spell-slot-setting {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 60px 80px;
+    gap: 8px;
 
     align-items: center;
 }
@@ -332,37 +449,9 @@ button:disabled {
     font-size: 32px;
 }
 
-#hpActions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-
-    margin-top: 16px;
-}
-
-/* =========================================================
-   ROLL D6
-   ========================================================= */
-
-#rollD6Actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-
-    margin-top: 16px;
-}
-
 /* =========================================================
    RESULTS
    ========================================================= */
-
-.results {
-    display: grid;
-
-    gap: 9px;
-
-    margin-top: 16px;
-}
 
 .result-row {
     display: flex;
@@ -402,11 +491,9 @@ button:disabled {
     letter-spacing: 0.08em;
 }
 
-#individualRolls {
+.dice-list {
     display: flex;
-
     flex-wrap: wrap;
-
     gap: 7px;
 }
 
@@ -430,42 +517,25 @@ button:disabled {
     color: #fff;
 }
 
-#resultActions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-
-    margin-top: 16px;
-}
-
-#spellSlotResultActions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-
-    margin-top: 16px;
-}
-
-#spellSlotIndividualRolls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 7px;
-}
+/* =========================================================
+   TILE SELECTION
+   ========================================================= */
 
 #tileSelectionGrid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(9, 1fr);
     gap: 6px;
 
     margin-top: 14px;
 }
 
 #tileSelectionGrid label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: relative;
 
     min-height: 38px;
+
+    display: grid;
+    place-items: center;
 
     padding: 5px;
 
@@ -477,6 +547,8 @@ button:disabled {
     cursor: pointer;
 
     font-weight: 700;
+
+    user-select: none;
 }
 
 #tileSelectionGrid label:hover {
@@ -484,8 +556,29 @@ button:disabled {
     border-color: #55596b;
 }
 
+/* The checkbox itself is invisible; the whole label acts as the toggle */
 #tileSelectionGrid input {
-    margin-right: 5px;
+    position: absolute;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+#tileSelectionGrid label:has(input:checked) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+@media (max-width: 520px) {
+    .spell-slot-setting {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    #tileSelectionGrid {
+        grid-template-columns: repeat(7, 1fr);
+    }
 }
 
 /* =========================================================
@@ -496,15 +589,9 @@ button:disabled {
     position: fixed;
     inset: 0;
 
-    width: 100vw;
-    height: 100vh;
-
     z-index: 9999;
 
     overflow: hidden;
-
-    padding: 0;
-    margin: 0;
 
     background: transparent;
 }
@@ -512,9 +599,6 @@ button:disabled {
 #diceBox {
     position: absolute;
     inset: 0;
-
-    width: 100%;
-    height: 100%;
 
     overflow: hidden;
 
@@ -553,14 +637,6 @@ button:disabled {
     margin: 8px 0;
 }
 
-#tileCountActions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-
-    margin-top: 16px;
-}
-
 /* =========================================================
    SCRABBLE TILES
    ========================================================= */
@@ -568,9 +644,6 @@ button:disabled {
 #letterBoard {
     position: fixed;
     inset: 0;
-
-    width: 100vw;
-    height: 100vh;
 
     z-index: 10;
 
@@ -679,4 +752,206 @@ button:disabled {
     background: rgba(157, 124, 255, 0.18);
 
     color: var(--text);
+}
+
+/* =========================================================
+   INVENTORY
+   ========================================================= */
+
+#inventoryList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    max-height: 50vh;
+    overflow-y: auto;
+    scrollbar-color: var(--border) transparent;
+}
+
+.item-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 8px 8px 8px 14px;
+
+    background: #13151c;
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.item-card.active {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* A drunk Elixir of Grandiloquence */
+.item-card.spent {
+    opacity: 0.55;
+}
+
+.item-name {
+    flex: 1;
+    min-width: 0;
+
+    font-weight: 700;
+}
+
+.item-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    font-size: 14px;
+}
+
+.item-count .modal-input {
+    width: 64px;
+}
+
+.item-card > button:not(.item-discard) {
+    width: 110px;
+
+    padding: 8px;
+}
+
+.item-discard {
+    width: 28px;
+    height: 28px;
+
+    flex-shrink: 0;
+
+    padding: 0;
+
+    border: none;
+
+    background: none;
+
+    color: var(--muted);
+}
+
+.item-discard:hover {
+    background: none;
+    color: var(--danger);
+}
+
+@media (max-width: 520px) {
+    .item-card {
+        flex-wrap: wrap;
+    }
+
+    .item-name {
+        flex-basis: 100%;
+    }
+}
+
+#addItemForm {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+
+    align-items: center;
+}
+
+#addItemForm button {
+    padding: 8px 16px;
+}
+
+#boggleOilPicker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 12px;
+}
+
+#boggleOilPicker button {
+    padding: 6px 12px;
+}
+
+#addItemMessage {
+    min-height: 1.2em;
+    margin: 10px 0 0;
+}
+
+/* =========================================================
+   GREEN GEM BRACELET
+   ========================================================= */
+
+/* =========================================================
+   ELIXIR OF GRANDILOQUENCE
+   ========================================================= */
+
+#endTurnButton {
+    position: fixed;
+
+    left: 18px;
+    bottom: 20px;
+
+    width: 280px;
+
+    border-color: var(--accent);
+
+    z-index: 15;
+}
+
+#endTurnCount {
+    color: var(--accent);
+}
+
+#tileSelectionLayer {
+    position: fixed;
+    inset: 0;
+
+    z-index: 16;
+
+    cursor: crosshair;
+
+    touch-action: none;
+}
+
+#tileSelectionBanner {
+    position: absolute;
+
+    top: 20px;
+    left: 50%;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    padding: 10px 10px 10px 16px;
+
+    transform: translateX(-50%);
+
+    background: var(--panel);
+
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+
+    cursor: default;
+
+    font-weight: 650;
+}
+
+#tileSelectionBanner button {
+    padding: 6px 12px;
+}
+
+#tileSelectionBox {
+    position: absolute;
+
+    border: 2px dashed var(--accent);
+    border-radius: 4px;
+
+    background: rgba(157, 124, 255, 0.12);
+
+    pointer-events: none;
+}
+
+.scrabble-letter.selected {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
 }

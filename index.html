@@ -5,21 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Spell: The RPG</title>
         <link rel="icon" type="image/x-icon" href="./imgs/favicon.ico">
-        <link rel="stylesheet" type="text/css" href="./style.css">
-        <style>
-            .spell-slot-settings { display: grid; gap: 12px; margin: 10px 0 18px; }
-            .spell-slot-setting { display: grid; grid-template-columns: 1fr 1.4fr 60px 80px; gap: 8px; align-items: center; }
-            .spell-slot-disabled { color: var(--muted); opacity: 0.65; }
-            #tileSelectionGrid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 14px; }
-            #tileSelectionGrid label { min-height: 38px; display: grid; place-items: center; position: relative; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-2); cursor: pointer; font-weight: 700; user-select: none; }
-            #tileSelectionGrid label:hover { background: #303342; border-color: #55596b; }
-            #tileSelectionGrid input { position: absolute; opacity: 0; pointer-events: none; }
-            #tileSelectionGrid label:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
-            @media (max-width: 520px) {
-                .spell-slot-setting { grid-template-columns: 1fr 1fr; }
-                #tileSelectionGrid { grid-template-columns: repeat(7, 1fr); }
-            }
-        </style>
+        <link rel="stylesheet" href="./src/style.css">
     </head>
 
     <body>
@@ -28,7 +14,13 @@
             MAIN SCREEN
         ===================================================== -->
         <div id="mainScreen">
-            <button id="characterButton" aria-label="Open character settings" title="Character settings">🧙</button>
+            <button id="characterButton" class="icon-button" aria-label="Open character settings" title="Character settings">
+                <img src="./imgs/person.png" alt="">
+            </button>
+
+            <button id="inventoryButton" class="icon-button" aria-label="Open inventory" title="Inventory">
+                <img src="./imgs/backpack.png" alt="">
+            </button>
 
             <div id="spellControl" class="roll-button hidden">
                 <div>
@@ -43,7 +35,7 @@
                     </button>
                 </div>
             </div>
-        
+
             <div id="rollMenu">
                 <button id="hpManagerButton" class="roll-button">
                     <span>HP</span>
@@ -55,91 +47,208 @@
                     </span>
                 </button>
 
-                <button id="acButton" class="roll-button" disabled>
-                    <span>AC</span>
-                    <span id="acDisplay">1</span>
-                </button>
-
-                <hr class="roll-divider">
-
-                <div id="schoolGrid">
-                    <button id="harmButton" class="roll-button">
-                        <span>Harm</span>
-                        <span id="harmDisplay">1</span>
+                <div class="two-column">
+                    <button id="acButton" class="roll-button" disabled>
+                        <span>AC</span>
+                        <span id="acDisplay">1</span>
                     </button>
 
-                    <button id="aidButton" class="roll-button">
-                        <span>Aid</span>
-                        <span id="aidDisplay">1</span>
-                    </button>
-
-                    <button id="changeButton" class="roll-button">
-                        <span>Change</span>
-                        <span id="changeDisplay">1</span>
-                    </button>
-
-                    <button id="moveButton" class="roll-button">
-                        <span>Move</span>
-                        <span id="moveDisplay">1</span>
-                    </button>
-
-                    <button id="controlButton" class="roll-button">
-                        <span>Control</span>
-                        <span id="controlDisplay">1</span>
-                    </button>
-
-                    <button id="revealButton" class="roll-button">
-                        <span>Reveal</span>
-                        <span id="revealDisplay">1</span>
-                    </button>
-
-                    <button id="passionButton" class="roll-button">
-                        <span>Passion</span>
-                        <span id="passionDisplay">6</span>
-                    </button>
-
-                    <button id="createButton" class="roll-button">
-                        <span>Create</span>
-                        <span id="createDisplay">1</span>
+                    <button id="dexButton" class="roll-button" title="Roll initiative (d20 + Dexterity modifier)">
+                        <span>Initiative</span>
+                        <span id="initiativeButtonDisplay">+0</span>
                     </button>
                 </div>
 
                 <hr class="roll-divider">
 
-                <button id="spellSlot1" class="roll-button">
-                    <span id="spellSlot1Name">Spell slot 1</span>
-                    <span id="spellSlot1Display">0</span>
-                </button>
+                <div id="spellButtons">
+                    <div id="schoolGrid" class="two-column">
+                        <button id="harmButton" class="roll-button">
+                            <span>Harm</span>
+                            <span id="harmDisplay">1</span>
+                        </button>
 
-                <button id="spellSlot2" class="roll-button">
-                    <span id="spellSlot2Name">Spell slot 2</span>
-                    <span id="spellSlot2Display">0</span>
-                </button>
+                        <button id="aidButton" class="roll-button">
+                            <span>Aid</span>
+                            <span id="aidDisplay">1</span>
+                        </button>
 
-                <button id="spellSlot3" class="roll-button">
-                    <span id="spellSlot3Name">Spell slot 3</span>
-                    <span id="spellSlot3Display">0</span>
-                </button>
+                        <button id="changeButton" class="roll-button">
+                            <span>Change</span>
+                            <span id="changeDisplay">1</span>
+                        </button>
 
-                <button id="spellSlot4" class="roll-button">
-                    <span id="spellSlot4Name">Spell slot 4</span>
-                    <span id="spellSlot4Display">0</span>
+                        <button id="moveButton" class="roll-button">
+                            <span>Move</span>
+                            <span id="moveDisplay">1</span>
+                        </button>
+
+                        <button id="controlButton" class="roll-button">
+                            <span>Control</span>
+                            <span id="controlDisplay">1</span>
+                        </button>
+
+                        <button id="revealButton" class="roll-button">
+                            <span>Reveal</span>
+                            <span id="revealDisplay">1</span>
+                        </button>
+
+                        <button id="passionButton" class="roll-button">
+                            <span>Passion</span>
+                            <span id="passionDisplay">6</span>
+                        </button>
+
+                        <button id="createButton" class="roll-button">
+                            <span>Create</span>
+                            <span id="createDisplay">1</span>
+                        </button>
+                    </div>
+
+                    <hr class="roll-divider">
+
+                    <button id="spellSlot1" class="roll-button">
+                        <span id="spellSlot1Name">Spell slot 1</span>
+                        <span id="spellSlot1Display">0</span>
+                    </button>
+
+                    <button id="spellSlot2" class="roll-button">
+                        <span id="spellSlot2Name">Spell slot 2</span>
+                        <span id="spellSlot2Display">0</span>
+                    </button>
+
+                    <button id="spellSlot3" class="roll-button">
+                        <span id="spellSlot3Name">Spell slot 3</span>
+                        <span id="spellSlot3Display">0</span>
+                    </button>
+
+                    <button id="spellSlot4" class="roll-button">
+                        <span id="spellSlot4Name">Spell slot 4</span>
+                        <span id="spellSlot4Display">0</span>
+                    </button>
+                </div>
+
+                <button id="castSpellButton" class="roll-button hidden">
+                    <span>Cast spell</span>
                 </button>
 
                 <hr class="roll-divider">
 
-                <button id="dexButton" class="roll-button">
-                    <span>Dexterity</span>
-                    <span class="rolls-title">(Initiative)</span>
-                </button>
+                <!-- Clicking a die asks how many to roll; hovering it shows quick buttons for 1–6 dice -->
+                <div id="diceGrid" class="two-column">
+                    <div class="dice-cell" data-sides="2">
+                        <button class="roll-button dice-button">
+                            <span>D2</span>
+                        </button>
 
-                <button id="rollD6Button" class="roll-button">
-                    <span>D6</span>
-                    <span></span>
-                </button>
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="4">
+                        <button class="roll-button dice-button">
+                            <span>D4</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="6">
+                        <button class="roll-button dice-button">
+                            <span>D6</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="8">
+                        <button class="roll-button dice-button">
+                            <span>D8</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="10">
+                        <button class="roll-button dice-button">
+                            <span>D10</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="12">
+                        <button class="roll-button dice-button">
+                            <span>D12</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell" data-sides="20">
+                        <button class="roll-button dice-button">
+                            <span>D20</span>
+                        </button>
+
+                        <div class="quick-roll" aria-label="Quick roll">
+                            <button data-count="1">1</button>
+                            <button data-count="2">2</button>
+                            <button data-count="3">3</button>
+                            <button data-count="4">4</button>
+                            <button data-count="5">5</button>
+                            <button data-count="6">6</button>
+                        </div>
+                    </div>
+
+                    <div class="dice-cell">
+                        <button id="rollD100Button" class="roll-button">
+                            <span>D100</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-        
+
         <!-- =====================================================
             LETTERS
         ===================================================== -->
@@ -188,7 +297,7 @@
 
                     <input class="modal-input" id="acInput" type="number" min="1" step="1" value="40">
                 </div>
-                
+
                 <hr class="roll-divider">
 
                 <div id="characterSchoolGrid">
@@ -295,7 +404,7 @@
         <div id="hpManagerOverlay" class="overlay hidden">
             <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hpTitle">
                 <h2 id="hpTitle">Hit Points</h2>
-                
+
                 <hr class="roll-divider">
 
                 <div id="currentHP">
@@ -314,7 +423,7 @@
                     <input class="modal-input" id="healthAmountInput" type="number" min="1" step="1" value="1">
                 </div>
 
-                <div id="hpActions">
+                <div id="hpActions" class="button-pair">
                     <button id="damageHPButton" class="danger">
                         Damage
                     </button>
@@ -344,7 +453,7 @@
         <div id="schoolResultOverlay" class="overlay hidden">
             <div class="modal" role="dialog" aria-modal="true" aria-labelledby="schoolResultTitle">
                 <h2 id="schoolResultTitle">Result</h2>
-                
+
                 <hr class="roll-divider">
 
                 <div class="result-row">
@@ -370,7 +479,15 @@
 
                     <strong id="totalSum"></strong>
                 </div>
-                
+
+                <div id="doubleDamageResult" class="result-row hidden">
+                    <span class="result-label">
+                        Damage ×2 (Blue Gem Necklace)
+                    </span>
+
+                    <strong id="doubleDamage"></strong>
+                </div>
+
                 <hr class="roll-divider">
 
                 <div class="rolls">
@@ -378,10 +495,10 @@
                         Individual rolls
                     </div>
 
-                    <div id="individualRolls"></div>
+                    <div id="individualRolls" class="dice-list"></div>
                 </div>
 
-                <div id="resultActions">
+                <div id="resultActions" class="button-pair">
                     <button id="castSchoolResult" class="primary">
                         Cast
                     </button>
@@ -403,7 +520,7 @@
         <div id="spellSlotResultOverlay" class="overlay hidden">
             <div class="modal" role="dialog" aria-modal="true" aria-labelledby="spellSlotResultTitle">
                 <h2 id="spellSlotResultTitle">Result</h2>
-                
+
                 <hr class="roll-divider">
 
                 <div class="result-row">
@@ -421,7 +538,7 @@
 
                     <strong id="spellSlotTotalSum"></strong>
                 </div>
-                
+
                 <hr class="roll-divider">
 
                 <div class="rolls">
@@ -429,10 +546,10 @@
                         Individual rolls
                     </div>
 
-                    <div id="spellSlotIndividualRolls"></div>
+                    <div id="spellSlotIndividualRolls" class="dice-list"></div>
                 </div>
 
-                <div id="spellSlotResultActions">
+                <div id="spellSlotResultActions" class="button-pair">
                     <button id="successButton" class="primary">
                         Success
                     </button>
@@ -441,13 +558,9 @@
                         Fail
                     </button>
                 </div>
-
-                <div id="spellSlotBackButton" class="actions hidden">
-                    <button id="closeResults">Close</button>
-                </div>
             </div>
         </div>
-        
+
         <!-- =====================================================
             SPELL SLOT LEVEL-UP RESULT OVERLAY
         ===================================================== -->
@@ -516,7 +629,7 @@
                     <label><input type="checkbox" value="_"><span>_</span></label>
                 </div>
 
-                <div id="tileCountActions">
+                <div id="tileCountActions" class="button-pair">
                     <button id="getTiles" class="primary">
                         Get tiles
                     </button>
@@ -527,36 +640,36 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- =====================================================
-            ROLL D6 OVERLAY
+            ROLL DICE OVERLAY
         ===================================================== -->
-        <div id="rollD6Overlay" class="overlay hidden">
-            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rollD6Title">
-                <h2 id="rollD6Title">Roll d6</h2>
+        <div id="rollDiceOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rollDiceTitle">
+                <h2 id="rollDiceTitle">Roll d6</h2>
 
                 <hr class="roll-divider">
 
                 <div class="modal-element">
-                    <label for="rollD6Input">
+                    <label for="rollDiceInput">
                         Amount
                     </label>
 
-                    <input class="modal-input" id="rollD6Input" type="number" min="1" step="1" value="1">
+                    <input class="modal-input" id="rollDiceInput" type="number" min="1" step="1" value="1">
                 </div>
 
-                <div id="rollD6Actions">
-                    <button id="rollD6" class="primary">
+                <div class="button-pair">
+                    <button id="confirmRollDice" class="primary">
                         Roll
                     </button>
 
-                    <button id="cancelD6" class="danger">
+                    <button id="cancelRollDice" class="danger">
                         Cancel
                     </button>
                 </div>
             </div>
         </div>
-        
+
         <!-- =====================================================
             DEXTERITY RESULT OVERLAY
         ===================================================== -->
@@ -595,14 +708,150 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- =====================================================
+            INVENTORY OVERLAY
+        ===================================================== -->
+        <div id="inventoryOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inventoryTitle">
+                <h2 id="inventoryTitle">Inventory</h2>
+
+                <hr class="roll-divider">
+
+                <div id="inventoryList" aria-label="Items"></div>
+
+                <p id="inventoryEmpty" class="result-label hidden">Your inventory is empty.</p>
+
+                <hr class="roll-divider">
+
+                <form id="addItemForm" autocomplete="off">
+                    <label for="addItemInput">Add item</label>
+                    <input class="modal-input" id="addItemInput" type="text" placeholder="Item code" spellcheck="false">
+                    <button type="submit" class="primary">Add</button>
+                </form>
+
+                <div id="boggleOilPicker" class="hidden">
+                    <span class="result-label">Which Bottle of Boggle Oil?</span>
+                    <button type="button" data-variant="Hardened">Hardened</button>
+                    <button type="button" data-variant="Slippery">Slippery</button>
+                    <button type="button" data-variant="Sticky">Sticky</button>
+                </div>
+
+                <p id="addItemMessage" class="result-label"></p>
+
+                <div class="actions">
+                    <button id="closeInventory">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            GENERIC RESULT OVERLAY (items, Elixir tile score)
+        ===================================================== -->
+        <div id="infoResultOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="infoResultTitle">
+                <h2 id="infoResultTitle">Result</h2>
+
+                <hr class="roll-divider">
+
+                <div id="infoResultRows"></div>
+
+                <div id="infoResultListBox" class="rolls hidden">
+                    <div id="infoResultListTitle" class="rolls-title"></div>
+
+                    <div id="infoResultList" class="dice-list"></div>
+                </div>
+
+                <div class="actions">
+                    <button id="closeInfoResult">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            GREEN GEM BRACELET OVERLAY
+        ===================================================== -->
+        <div id="braceletOverlay" class="overlay hidden">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="braceletTitle">
+                <h2 id="braceletTitle">Cast Spell</h2>
+
+                <hr class="roll-divider">
+
+                <div id="braceletRolls"></div>
+
+                <hr class="roll-divider">
+
+                <div class="rolls-title">
+                    Choose a school
+                </div>
+
+                <div id="braceletSchools" class="two-column">
+                    <button class="roll-button" data-school="harm">
+                        <span>Harm</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="aid">
+                        <span>Aid</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="change">
+                        <span>Change</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="move">
+                        <span>Move</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="control">
+                        <span>Control</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="reveal">
+                        <span>Reveal</span>
+                        <span data-level>1</span>
+                    </button>
+
+                    <button class="roll-button" data-school="create">
+                        <span>Create</span>
+                        <span data-level>1</span>
+                    </button>
+                </div>
+
+                <div class="actions">
+                    <button id="closeBracelet">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =====================================================
+            ELIXIR OF GRANDILOQUENCE
+        ===================================================== -->
+        <button id="endTurnButton" class="roll-button hidden">
+            <span>End of turn</span>
+            <span id="endTurnCount">4</span>
+        </button>
+
+        <div id="tileSelectionLayer" class="hidden">
+            <div id="tileSelectionBanner">
+                <span>Draw a box around the letter tiles used in the spell</span>
+                <button id="cancelTileSelection">Cancel</button>
+            </div>
+
+            <div id="tileSelectionBox" class="hidden"></div>
+        </div>
+
         <!-- =====================================================
             DICE
         ===================================================== -->
         <div id="animationOverlay" class="dice-overlay hidden">
             <div id="diceBox"></div>
         </div>
-        
-        <script type="module" src="./app.js"></script>
+
+        <script type="module" src="./src/main.js"></script>
     </body>
 </html>
