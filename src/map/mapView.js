@@ -9,10 +9,11 @@ import enemyIcon from "../../imgs/enemy.png";
  * The DM sees the whole map with hidden squares dimmed, and has tools to
  * reveal / hide squares, place enemies, and draw / erase lines. Players only
  * see the pictures of revealed squares the DM sends them (see fog.js); they
- * don't know how big the map is.
+ * don't know how big the map is. Everyone has a ruler and can show the doors.
  *
  * Dragging moves the view (right or middle drag always does), dragging a token
  * moves it, and holding Shift snaps a token to the middle of a grid square.
+ * While a tool is in use, tokens stay put: the tool gets the pointer instead.
  */
 
 const MAX_ZOOM = 2;       // 1 = one map pixel per screen pixel
@@ -25,6 +26,8 @@ const STROKE_SCREEN_WIDTH = 5;
 const ERASER_SCREEN_RADIUS = 14;
 const STROKE_POINT_SPACING = 3; // screen pixels between recorded points
 
+const FEET_PER_SQUARE = 5;
+
 const TOKEN_COLORS = ["#9d7cff", "#34baeb", "#e0a526", "#4fbf73", "#a3b83a", "#e57bd0", "#5ec4b6", "#f08a4b"];
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -34,6 +37,10 @@ const world = $("mapWorld");
 const mapLayer = $("mapLayer");
 const fogCanvas = $("fogCanvas");
 const drawLayer = $("drawLayer");
+const doorLayer = $("doorLayer");
+const doorHandles = $("doorHandles");
+const rulerLayer = $("rulerLayer");
+const rulerLabel = $("rulerLabel");
 const selectionBox = $("selectionBox");
 const tokenLayer = $("tokenLayer");
 
@@ -44,7 +51,7 @@ let minZoom = PLAYER_MIN_ZOOM;
 let mapSize = null;
 let gridSize = 128;
 
-// DM tools: "reveal" | "hide" | "enemy" | "draw" | "erase" | null (just move around)
+// "ruler" (everyone), DM tools "reveal" | "hide" | "enemy" | "draw" | "erase" | "door", or null (just move around)
 let tool = null;
 let drawColor = "#ffffff";
 let canEditEnemies = false;
@@ -60,7 +67,9 @@ let callbacks = {
     enemyRemoved() {},   // (id)                      DM clicked an enemy's ×
     areaDrawn() {},      // (start, end, tool)        DM drew a reveal / hide box (grid squares)
     strokeDrawn() {},    // ({ color, width, points }) DM finished a line
-    erased() {}          // (x, y, radius)            DM dragged the eraser here
+    erased() {},         // (x, y, radius)            DM dragged the eraser here
+    doorDrawn() {},      // (a, b)                    DM drew a door (ends in grid squares)
+    doorClicked() {}     // (id)                      DM clicked a door (to show / hide it for players)
 };
 
 /*
@@ -144,7 +153,7 @@ viewport.addEventListener("contextmenu", event => event.preventDefault());
  */
 
 const pointers = new Map(); // pointerId → { x, y }
-let gesture = null;         // { kind: "pan" | "pinch" | "token" | "area" | "stroke" | "erase", ... }
+let gesture = null;         // { kind: "pan" | "pinch" | "token" | "area" | "stroke" | "erase" | "ruler" | "doorLine", ... }
 
 function snapToGrid(value) {
     return Math.floor(value / gridSize) * gridSize + gridSize / 2;
@@ -152,6 +161,29 @@ function snapToGrid(value) {
 
 function cellAt(point) {
     return { x: Math.floor(point.x / gridSize), y: Math.floor(point.y / gridSize) };
+}
+
+/* A point in grid squares (not rounded). */
+function inSquares(point) {
+    return { x: point.x / gridSize, y: point.y / gridSize };
+}
+
+const toHalf = value => Math.round(value * 2) / 2;
+
+/*
+ * A door from `from` to `to` (in grid squares): it lies on the grid line nearest to where it
+ * started, running straight across or straight down, with its ends in half-square steps.
+ */
+function doorAlongGrid(from, to) {
+    if (Math.abs(to.x - from.x) >= Math.abs(to.y - from.y)) {
+        const y = Math.round(from.y);
+
+        return { start: { x: toHalf(from.x), y }, end: { x: toHalf(to.x), y } };
+    }
+
+    const x = Math.round(from.x);
+
+    return { start: { x, y: toHalf(from.y) }, end: { x, y: toHalf(to.y) } };
 }
 
 function startPan(pointer) {
@@ -198,12 +230,33 @@ function startTool(event) {
     const point = toMap(event.clientX, event.clientY);
 
     switch (tool) {
+        case "ruler": {
+            const cell = cellAt(point);
+
+            gesture = { kind: "ruler", start: cell, end: cell };
+            showRuler(cell, cell);
+            break;
+        }
+
         case "reveal":
         case "hide": {
             const cell = cellAt(point);
 
             gesture = { kind: "area", start: cell, end: cell };
             showSelection(cell, cell);
+            break;
+        }
+
+        case "door": {
+            const from = inSquares(point);
+            const preview = document.createElementNS(SVG, "g");
+
+            preview.setAttribute("class", "door-preview");
+            preview.innerHTML = `<line class="door-casing" /><line class="door-line" />`;
+            doorLayer.appendChild(preview);
+
+            gesture = { kind: "doorLine", from, ...doorAlongGrid(from, from), preview };
+            showDoorPreview();
             break;
         }
 
@@ -226,7 +279,7 @@ function startTool(event) {
         }
 
         case "erase":
-            gesture = { kind: "erase" };
+            gesture = { kind: "erase", last: point };
             callbacks.erased(point.x, point.y, ERASER_SCREEN_RADIUS / view.scale);
             break;
 
@@ -247,6 +300,15 @@ viewport.addEventListener("pointerdown", event => {
 
     if (remove && canEditEnemies && (!isMouse || event.button === 0)) {
         callbacks.enemyRemoved(remove.closest(".token").dataset.id);
+
+        return;
+    }
+
+    // DM: the eye button on a door (shows or hides it for players)
+    const eye = event.target.closest(".door-eye");
+
+    if (eye && canEditEnemies && (!isMouse || event.button === 0)) {
+        callbacks.doorClicked(eye.dataset.door);
 
         return;
     }
@@ -274,7 +336,8 @@ viewport.addEventListener("pointerdown", event => {
         return;
     }
 
-    const token = grabbableToken(event.target);
+    // While a tool is in use, tokens can't be moved (e.g. measuring from your own token)
+    const token = tool ? null : grabbableToken(event.target);
 
     if (token) {
         const position = toMap(event.clientX, event.clientY);
@@ -343,6 +406,16 @@ viewport.addEventListener("pointermove", event => {
             showSelection(gesture.start, gesture.end);
             break;
 
+        case "ruler":
+            gesture.end = cellAt(point());
+            showRuler(gesture.start, gesture.end);
+            break;
+
+        case "doorLine":
+            Object.assign(gesture, doorAlongGrid(gesture.from, inSquares(point())));
+            showDoorPreview();
+            break;
+
         case "stroke": {
             const { x, y } = point();
             const [lastX, lastY] = gesture.points[gesture.points.length - 1];
@@ -355,9 +428,20 @@ viewport.addEventListener("pointermove", event => {
         }
 
         case "erase": {
-            const { x, y } = point();
+            // Erase along the whole path, not just where pointer events land (a quick swipe skips a lot)
+            const to = point();
+            const radius = ERASER_SCREEN_RADIUS / view.scale;
+            const steps = Math.max(1, Math.ceil(Math.hypot(to.x - gesture.last.x, to.y - gesture.last.y) / (radius / 2)));
 
-            callbacks.erased(x, y, ERASER_SCREEN_RADIUS / view.scale);
+            for (let step = 1; step <= steps; step++) {
+                callbacks.erased(
+                    gesture.last.x + (to.x - gesture.last.x) * step / steps,
+                    gesture.last.y + (to.y - gesture.last.y) * step / steps,
+                    radius
+                );
+            }
+
+            gesture.last = to;
             break;
         }
 
@@ -408,6 +492,11 @@ function endTokenDrag(snap) {
 
 /* Stops a box or line without using it (e.g. a second finger touched down). */
 function cancelToolGesture() {
+    if (gesture?.kind === "doorLine") {
+        gesture.preview.remove();
+        gesture = null;
+    }
+
     if (gesture?.kind === "area") {
         selectionBox.classList.add("hidden");
     } else if (gesture?.kind === "stroke") {
@@ -420,7 +509,17 @@ function cancelToolGesture() {
 }
 
 function endToolGesture() {
-    if (gesture?.kind === "area") {
+    if (gesture?.kind === "doorLine") {
+        const { start, end } = gesture;
+
+        cancelToolGesture();
+
+        if (start.x !== end.x || start.y !== end.y) {
+            callbacks.doorDrawn(start, end);
+        }
+    } else if (gesture?.kind === "ruler") {
+        gesture = null; // the measurement stays on screen until the next one
+    } else if (gesture?.kind === "area") {
         const { start, end } = gesture;
 
         cancelToolGesture();
@@ -454,10 +553,142 @@ function onPointerEnd(event) {
 viewport.addEventListener("pointerup", onPointerEnd);
 viewport.addEventListener("pointercancel", onPointerEnd);
 
-/* DM tools: "reveal", "hide", "enemy", "draw", "erase", or null to just move around. */
+/* "ruler", the DM tools "reveal", "hide", "enemy", "draw", "erase", or null to just move around. */
 export function setTool(name) {
     tool = name;
     viewport.dataset.tool = name ?? "";
+
+    if (name !== "ruler") {
+        hideRuler();
+    }
+}
+
+/*
+ * =========================================================
+ * RULER: from the middle of one square to another. As in D&D 5e,
+ * a diagonal step counts as one square; one square is 5 feet.
+ * =========================================================
+ */
+
+function showRuler(start, end) {
+    const x1 = (start.x + 0.5) * gridSize;
+    const y1 = (start.y + 0.5) * gridSize;
+    const x2 = (end.x + 0.5) * gridSize;
+    const y2 = (end.y + 0.5) * gridSize;
+    const squares = Math.max(Math.abs(end.x - start.x), Math.abs(end.y - start.y));
+
+    rulerLayer.innerHTML = `
+        <line class="ruler-casing" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />
+        <line class="ruler-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />
+        <circle class="ruler-end" cx="${x1}" cy="${y1}" r="${gridSize * 0.12}" />
+        <circle class="ruler-end" cx="${x2}" cy="${y2}" r="${gridSize * 0.12}" />`;
+
+    rulerLabel.textContent = `${squares * FEET_PER_SQUARE} ft`;
+    rulerLabel.style.left = `${x2}px`;
+    rulerLabel.style.top = `${y2}px`;
+    rulerLabel.classList.remove("hidden");
+}
+
+function hideRuler() {
+    rulerLayer.innerHTML = "";
+    rulerLabel.classList.add("hidden");
+}
+
+/*
+ * =========================================================
+ * DOORS
+ * =========================================================
+ */
+
+function setLine(line, a, b) {
+    line.setAttribute("x1", a.x * gridSize);
+    line.setAttribute("y1", a.y * gridSize);
+    line.setAttribute("x2", b.x * gridSize);
+    line.setAttribute("y2", b.y * gridSize);
+}
+
+/* The door the DM is drawing */
+function showDoorPreview() {
+    for (const line of gesture.preview.querySelectorAll("line")) {
+        setLine(line, gesture.start, gesture.end);
+    }
+}
+
+const EYE_OPEN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_CLOSED = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>`;
+
+/*
+ * DM: hovering a door shows an eye button in its middle, to show or hide it for players.
+ * The hover area lies under the tokens, so a token in a doorway can still be grabbed.
+ */
+function doorHandle(door) {
+    const handle = element("div", "door-handle");
+    const eye = element("button", "door-eye");
+
+    const x1 = Math.min(door.a.x, door.b.x) * gridSize;
+    const y1 = Math.min(door.a.y, door.b.y) * gridSize;
+    const x2 = Math.max(door.a.x, door.b.x) * gridSize;
+    const y2 = Math.max(door.a.y, door.b.y) * gridSize;
+    const reach = gridSize * 0.35; // how far from the door line the hover area goes
+
+    handle.style.left = `${x1 - reach}px`;
+    handle.style.top = `${y1 - reach}px`;
+    handle.style.width = `${x2 - x1 + reach * 2}px`;
+    handle.style.height = `${y2 - y1 + reach * 2}px`;
+
+    eye.dataset.door = door.id;
+    eye.innerHTML = door.visible ? EYE_OPEN : EYE_CLOSED;
+    eye.title = door.visible
+        ? "Players can see this door. Click to hide it from them."
+        : "Hidden from players. Click to show it to them.";
+    eye.setAttribute("aria-label", eye.title);
+
+    handle.appendChild(eye);
+
+    return handle;
+}
+
+/*
+ * doors: [{ id, a: { x, y }, b: { x, y }, visible }] with ends in grid squares.
+ * The DM sees all doors (the ones players can't see are faint and dashed) and
+ * gets an eye button on each; players only get the doors the DM shares.
+ */
+export function renderDoors(doors) {
+    doorHandles.replaceChildren(...(canEditEnemies ? doors.map(doorHandle) : []));
+
+    doorLayer.replaceChildren(...doors.map(door => {
+        const group = document.createElementNS(SVG, "g");
+        const coordinates = {
+            x1: door.a.x * gridSize,
+            y1: door.a.y * gridSize,
+            x2: door.b.x * gridSize,
+            y2: door.b.y * gridSize
+        };
+
+        group.classList.toggle("invisible", door.visible === false);
+
+        for (const className of ["door-casing", "door-line"]) {
+            const line = document.createElementNS(SVG, "line");
+
+            line.setAttribute("class", className);
+
+            for (const [name, value] of Object.entries(coordinates)) {
+                line.setAttribute(name, value);
+            }
+
+            group.appendChild(line);
+        }
+
+        return group;
+    }));
+}
+
+export function setDoorsVisible(visible) {
+    world.classList.toggle("show-doors", visible);
+}
+
+export function areDoorsVisible() {
+    return world.classList.contains("show-doors");
 }
 
 export function setDrawColor(color) {
@@ -600,6 +831,8 @@ export function clearMap() {
 
     renderDrawings([]);
     renderEnemies({});
+    renderDoors([]);
+    hideRuler();
 
     mapSize = null;
     minZoom = PLAYER_MIN_ZOOM;
@@ -761,20 +994,19 @@ export function moveToken(id, x, y) {
     }
 }
 
-/* enemies: { [id]: { x, y, number } }. The DM also gets a × to remove each one. */
+/* enemies: { [id]: { x, y, number, name } }. The DM also gets a × to remove each one. */
 export function renderEnemies(enemies) {
     syncTokens("enemy", enemies, (token, enemy) => {
-        const name = `Enemy ${enemy.number}`;
+        const name = enemy.name || `Enemy ${enemy.number}`;
 
         token.querySelector(".token-name").textContent = name;
         token.title = name;
 
-        if (canEditEnemies && !token.querySelector(".token-remove")) {
-            const remove = element("button", "token-remove", "×");
+        if (canEditEnemies) {
+            const remove = token.querySelector(".token-remove") ?? token.appendChild(element("button", "token-remove", "×"));
 
             remove.title = `Remove ${name}`;
             remove.setAttribute("aria-label", remove.title);
-            token.appendChild(remove);
         }
     });
 }

@@ -55,6 +55,28 @@ async function storeMap(map) {
     }
 }
 
+/*
+ * The DM's notes library (see noteFormat.js) is kept the same way, so it
+ * stays off the public site too: [{ title, text }]
+ */
+const NOTES_KEY = "notes";
+
+export async function loadStoredNotes() {
+    try {
+        return (await withStore("readonly", store => store.get(NOTES_KEY))) ?? [];
+    } catch {
+        return [];
+    }
+}
+
+export async function storeNotes(notes) {
+    try {
+        await withStore("readwrite", store => store.put(notes, NOTES_KEY));
+    } catch {
+        // Not remembered: the DM will have to load the notes again next time
+    }
+}
+
 function base64ToBytes(base64) {
     if (Uint8Array.fromBase64) {
         return Uint8Array.fromBase64(base64);

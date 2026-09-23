@@ -175,15 +175,7 @@ button:disabled {
     left: 154px;
 }
 
-.icon-button svg {
-    width: 30px;
-    height: 30px;
 
-    fill: none;
-    stroke: #fff;
-    stroke-width: 2;
-    stroke-linejoin: round;
-}
 
 #rollMenu {
     position: absolute;
@@ -725,6 +717,21 @@ button:disabled {
     font-weight: 700;
 
     line-height: 1;
+}
+
+/* Under tiles that spell a word (see words.js) */
+.word-underline {
+    position: absolute;
+
+    height: 4px;
+
+    border-radius: 2px;
+
+    background: var(--accent);
+
+    box-shadow: 0 0 8px rgba(157, 124, 255, 0.6);
+
+    pointer-events: none;
 }
 
 /* =========================================================

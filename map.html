@@ -23,8 +23,14 @@
                 <div id="gridOverlay"></div>
                 <!-- The DM's drawings -->
                 <svg id="drawLayer" width="1" height="1" aria-hidden="true"></svg>
+                <!-- Doors (shown with the Doors button) -->
+                <svg id="doorLayer" width="1" height="1"></svg>
                 <div id="selectionBox" class="hidden"></div>
+                <!-- DM: an eye button on each door -->
+                <div id="doorHandles"></div>
                 <div id="tokenLayer"></div>
+                <svg id="rulerLayer" width="1" height="1" aria-hidden="true"></svg>
+                <div id="rulerLabel" class="hidden"></div>
             </div>
         </div>
 
@@ -35,19 +41,53 @@
             <button id="leaveRoom">Leave</button>
         </div>
 
+        <!-- =====================================================
+            NOTES (see notes.js)
+        ===================================================== -->
+        <div id="sideButtons">
+            <button id="myNotesButton" class="side-button" title="Notes" aria-label="Notes">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3h9l4 4v14H6z" />
+                    <path d="M15 3v4h4M9 11h7M9 15h7M9 19h4" />
+                </svg>
+            </button>
+
+            <!-- DM only -->
+            <button id="libraryButton" class="side-button hidden" title="Library: search your notes" aria-label="Library">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z" />
+                </svg>
+            </button>
+        </div>
+
+        <div id="librarySearch" class="hidden" role="dialog" aria-label="Search your notes">
+            <input id="librarySearchInput" class="modal-input" type="search" placeholder="Search your notes…" spellcheck="false" autocomplete="off">
+
+            <div id="libraryResults"></div>
+            <p id="libraryEmpty" class="result-label hidden"></p>
+
+            <footer id="libraryFooter">
+                <span id="libraryCount" class="result-label"></span>
+                <button id="loadLibraryButton" title="Load a Markdown notes file (or several)">Load notes file…</button>
+                <input id="libraryFileInput" type="file" accept=".md,.markdown,.txt" multiple hidden>
+            </footer>
+        </div>
+
         <div id="mapControls">
             <button id="zoomIn" aria-label="Zoom in" title="Zoom in">+</button>
             <button id="zoomOut" aria-label="Zoom out" title="Zoom out">−</button>
             <button id="toggleGrid" title="Show or hide the grid">Grid</button>
-            <button id="togglePanel">Hide players</button>
+            <button id="toggleDoors" title="Show or hide where the doors are">Doors</button>
+            <button data-tool="ruler" title="Measure distances (1 square = 5 ft)">Ruler</button>
+            <button id="togglePanel" title="Show or hide the initiative list">Initiative</button>
 
             <!-- DM only -->
             <div id="dmTools" class="hidden">
                 <button data-tool="reveal" title="Drag over squares to show them to the players">Reveal</button>
                 <button data-tool="hide" title="Drag over squares to hide them again">Hide</button>
                 <button data-tool="enemy" title="Click a square to place an enemy">Enemy</button>
-                <button data-tool="draw" title="Draw lines everyone can see">Draw</button>
-                <button data-tool="erase" title="Drag over lines to erase them">Erase</button>
+                <button data-tool="draw" title="Draw lines everyone can see (the eraser is with the colours)">Draw</button>
+                <button data-tool="door" title="Drag along the grid to add a door">Door</button>
 
                 <div id="drawOptions" class="hidden">
                     <div id="colorSwatches"></div>
@@ -59,10 +99,15 @@
         </div>
 
         <!-- =====================================================
-            PLAYERS OVERVIEW
+            INITIATIVE LIST
         ===================================================== -->
-        <aside id="playersPanel" aria-label="Players">
-            <h2>Players</h2>
+        <aside id="playersPanel" aria-label="Initiative">
+            <div id="panelHeader">
+                <h2>Initiative</h2>
+                <button id="sortInitiative" class="hidden" title="Order by initiative, highest first">Sort</button>
+            </div>
+
+            <p id="playerListEmpty" class="result-label hidden">Nobody here yet.</p>
 
             <div id="playerList"></div>
         </aside>

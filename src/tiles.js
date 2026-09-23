@@ -1,5 +1,6 @@
 import { $, show, hide } from "./dom.js";
 import { TILE_BOARD_STORAGE_KEY } from "./state.js";
+import { findWords } from "./words.js";
 
 // Letter → [number of tiles in the bag, points]
 const SCRABBLE_LETTERS = {
@@ -44,16 +45,65 @@ const safeZone = $("safeZone");
 
 let scrabbleTileZIndex = 20;
 
+/* Every tile's letter and middle point. */
+function tileCenters(tiles = allTiles()) {
+    return tiles.map(tile => ({
+        letter: tile.dataset.letter,
+        x: parseFloat(tile.style.left) + TILE_SIZE / 2,
+        y: parseFloat(tile.style.top) + TILE_SIZE / 2
+    }));
+}
+
+/*
+ * =========================================================
+ * WORDS: a line under tiles that spell a word (see words.js)
+ * =========================================================
+ */
+
+let underlineUpdateScheduled = false;
+
+function updateWordUnderlines() {
+    underlineUpdateScheduled = false;
+
+    for (const line of letterBoard.querySelectorAll(".word-underline")) {
+        line.remove();
+    }
+
+    const tiles = allTiles();
+    const centers = tileCenters(tiles);
+
+    for (const word of findWords(centers, TILE_SIZE).words) {
+        const first = centers[word.tiles[0]];
+        const last = centers[word.tiles[word.tiles.length - 1]];
+        const bottom = Math.max(...word.tiles.map(index => centers[index].y)) + TILE_SIZE / 2;
+
+        const line = document.createElement("div");
+
+        line.className = "word-underline";
+        line.style.left = `${first.x - TILE_SIZE / 2}px`;
+        line.style.width = `${last.x - first.x + TILE_SIZE}px`;
+        line.style.top = `${bottom + 6}px`;
+
+        letterBoard.appendChild(line);
+    }
+}
+
+/* While dragging, at most once per frame */
+function scheduleWordUnderlines() {
+    if (!underlineUpdateScheduled) {
+        underlineUpdateScheduled = true;
+        requestAnimationFrame(updateWordUnderlines);
+    }
+}
+
 /*
  * The shared map (another tab) shows the DM what each player is spelling,
  * so the board's layout is saved whenever tiles appear, move or disappear.
  */
 function publishBoard() {
-    const tiles = allTiles().map(tile => ({
-        letter: tile.dataset.letter,
-        x: parseFloat(tile.style.left) + TILE_SIZE / 2,
-        y: parseFloat(tile.style.top) + TILE_SIZE / 2
-    }));
+    const tiles = tileCenters();
+
+    updateWordUnderlines();
 
     try {
         localStorage.setItem(TILE_BOARD_STORAGE_KEY, JSON.stringify({ tileSize: TILE_SIZE, tiles }));
@@ -157,6 +207,8 @@ function makeScrabbleTileDraggable(tile) {
         tile.style.top = `${y}px`;
 
         safeZone.classList.toggle("active", tileIsInSafeZone(tile));
+
+        scheduleWordUnderlines();
     }
 
     function stopDragging(event) {

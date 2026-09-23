@@ -11,7 +11,9 @@ import Peer from "peerjs";
  * Shared game (the DM's copy):
  *   { players: { [playerId]: { name, summary, token: { x, y }, online } },
  *     mapName, revealed: [grid square numbers], coordinates,
- *     enemies: { [id]: { x, y, number } }, drawings: [{ id, color, width, points }] }
+ *     enemies: { [id]: { x, y, number, name, hp, maxHp } }, drawings: [{ id, color, width, points }],
+ *     turnOrder: ["player:<id>" | "enemy:<id>", ...], initiative: { [key]: number },
+ *     doors: [{ id, a: { x, y }, b: { x, y }, visible }] (drawn by the DM, ends in grid squares) }
  *
  * Only the DM gets the full character summaries. Players are sent names,
  * health and token positions only (see publicPlayer), so the rest can't be
@@ -22,7 +24,9 @@ import Peer from "peerjs";
  *   player → DM:  hello { id, name, summary }, summary { summary }, move { id, x, y }
  *   DM → player:  game { game }, player { id, player }, move { id, x, y },
  *                 blocks { blocks: [{ key, version, x, y, width, height, type, data }] },
- *                 enemies { enemies }   only the ones on revealed squares
+ *                 enemies { enemies }   only the ones on revealed squares, without their health
+ *                 order { order, initiative }   the initiative list (visible entries only)
+ *                 doors { doors }       only visible doors next to squares players can see
  *                 drawings { drawings }, stroke { stroke }, erase { ids }
  */
 
@@ -100,7 +104,7 @@ export class Room {
      *            playerJoined(connection)  DM: send them the revealed map
      *            blocks(blocks)            player: map pictures arrived
      *            blocksReset()             player: forget the map (a fresh copy follows)
-     *            dmMessage(message)        player: enemies / drawings / stroke / erase from the DM }
+     *            dmMessage(message)        player: enemies / order / doors / drawings / stroke / erase from the DM }
      *          kind is "connecting", "connected" or "error"
      */
     constructor({ code, isHost, me, spawn, events }) {
@@ -441,6 +445,8 @@ export class Room {
                 break;
 
             case "enemies":
+            case "order":
+            case "doors":
             case "drawings":
             case "stroke":
             case "erase":

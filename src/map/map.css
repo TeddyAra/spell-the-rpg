@@ -49,9 +49,21 @@ body.panel-open #mapViewport {
 
 #mapLayer,
 #gridOverlay,
+#doorHandles,
 #tokenLayer {
     position: absolute;
     inset: 0;
+}
+
+/* The token layer covers the map; only the tokens themselves take the pointer */
+#tokenLayer,
+#doorHandles {
+    pointer-events: none;
+}
+
+.token,
+.door-handle {
+    pointer-events: auto;
 }
 
 #mapLayer,
@@ -79,12 +91,25 @@ body.panel-open #mapViewport {
     z-index: 3;
 }
 
-#selectionBox {
+#doorLayer {
     z-index: 4;
 }
 
-#tokenLayer {
+#selectionBox,
+#doorHandles {
     z-index: 5;
+}
+
+#tokenLayer {
+    z-index: 6;
+}
+
+#rulerLayer {
+    z-index: 7;
+}
+
+#rulerLabel {
+    z-index: 8;
 }
 
 /* The DM's drawings (lines can go anywhere, so nothing is clipped) */
@@ -102,6 +127,164 @@ body.panel-open #mapViewport {
 
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+/* =========================================================
+   DOORS AND RULER
+   ========================================================= */
+
+#doorLayer,
+#rulerLayer {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    overflow: visible;
+
+    pointer-events: none;
+}
+
+#doorLayer {
+    display: none;
+}
+
+#mapWorld.show-doors #doorLayer {
+    display: block;
+}
+
+/* DM: hovering a door shows an eye button to show or hide it for players (screen-sized) */
+#doorHandles {
+    display: none;
+}
+
+#mapWorld.dm.show-doors #doorHandles {
+    display: block;
+}
+
+.door-handle {
+    position: absolute;
+
+    display: grid;
+    place-items: center;
+}
+
+.door-eye {
+    width: calc(30px / var(--zoom));
+    height: calc(30px / var(--zoom));
+
+    display: none;
+    place-items: center;
+
+    padding: 0;
+
+    border: calc(2px / var(--zoom)) solid var(--accent);
+    border-radius: 50%;
+
+    background: var(--panel);
+
+    color: #fff;
+}
+
+.door-handle:hover .door-eye {
+    display: grid;
+}
+
+.door-eye:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.door-eye svg {
+    width: 62%;
+    height: 62%;
+
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Sized in map pixels like a real door, but never thinner than a few pixels on screen */
+.door-casing,
+.door-line {
+    stroke-linecap: round;
+}
+
+.door-casing {
+    stroke: rgba(10, 8, 20, 0.85);
+    stroke-width: max(34px, calc(12px / var(--zoom)));
+}
+
+.door-line {
+    stroke: var(--accent);
+    stroke-width: max(22px, calc(7px / var(--zoom)));
+}
+
+/* DM: a door the players can't see */
+#doorLayer .invisible {
+    opacity: 0.55;
+}
+
+#doorLayer .invisible .door-line {
+    stroke-dasharray: 26 22;
+}
+
+/* The door being drawn */
+.door-preview {
+    opacity: 0.7;
+}
+
+/* =========================================================
+   RULER
+   ========================================================= */
+
+.ruler-casing,
+.ruler-line {
+    stroke-linecap: round;
+
+    vector-effect: non-scaling-stroke;
+}
+
+.ruler-casing {
+    stroke: rgba(0, 0, 0, 0.75);
+    stroke-width: 7px;
+}
+
+.ruler-line {
+    stroke: #fff;
+    stroke-width: 3px;
+}
+
+.ruler-end {
+    fill: #fff;
+
+    stroke: rgba(0, 0, 0, 0.75);
+    stroke-width: 2px;
+
+    vector-effect: non-scaling-stroke;
+}
+
+/* Stays the same size on screen at any zoom */
+#rulerLabel {
+    position: absolute;
+
+    padding: calc(3px / var(--zoom)) calc(8px / var(--zoom));
+
+    transform: translate(calc(14px / var(--zoom)), calc(-50% - 18px / var(--zoom)));
+
+    border-radius: calc(6px / var(--zoom));
+
+    background: rgba(0, 0, 0, 0.8);
+
+    color: #fff;
+
+    font-size: calc(15px / var(--zoom));
+    font-weight: 700;
+    white-space: nowrap;
+
+    pointer-events: none;
 }
 
 /* The DM's whole map */
@@ -188,12 +371,19 @@ body.panel-open #mapViewport {
 #mapViewport[data-tool="reveal"],
 #mapViewport[data-tool="hide"],
 #mapViewport[data-tool="draw"],
-#mapViewport[data-tool="erase"] {
+#mapViewport[data-tool="erase"],
+#mapViewport[data-tool="ruler"],
+#mapViewport[data-tool="door"] {
     cursor: crosshair;
 }
 
 #mapViewport[data-tool="enemy"] {
     cursor: copy;
+}
+
+/* While a tool is in use, tokens can't be dragged: show the tool's cursor */
+#mapViewport[data-tool]:not([data-tool=""]) .token {
+    cursor: inherit;
 }
 
 /* =========================================================
@@ -388,6 +578,15 @@ body.panel-open #mapViewport {
 #mapControls {
     left: 16px;
     bottom: 16px;
+
+    flex-wrap: wrap;
+
+    max-width: calc(100vw - 32px);
+}
+
+/* Keep clear of the initiative list */
+body.panel-open #mapControls {
+    max-width: calc(100vw - var(--panel-width) - 32px);
 }
 
 .map-hint {
@@ -437,8 +636,17 @@ body.panel-open #mapViewport {
     box-shadow: 0 0 0 2px var(--accent);
 }
 
+/* The eraser: a crossed-out circle among the colours */
+#mapControls .eraser-swatch {
+    background:
+        linear-gradient(45deg, transparent calc(50% - 1.5px), var(--danger) calc(50% - 1.5px), var(--danger) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+        var(--panel-2);
+
+    border-color: var(--muted);
+}
+
 /* =========================================================
-   PLAYERS PANEL
+   INITIATIVE LIST
    ========================================================= */
 
 #playersPanel {
@@ -466,20 +674,32 @@ body.panel-open #playersPanel {
     display: flex;
 }
 
+#panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 12px;
+}
+
 #playersPanel h2 {
-    margin: 0 0 12px;
+    margin: 0;
 
     font-size: 20px;
+}
+
+#sortInitiative {
+    padding: 5px 12px;
 }
 
 #playerList {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
-.player-card {
-    padding: 12px;
+.list-entry {
+    padding: 10px 12px;
 
     background: #13151c;
 
@@ -487,33 +707,74 @@ body.panel-open #playersPanel {
     border-radius: 10px;
 }
 
-.player-card.offline {
+.list-entry.offline {
     opacity: 0.6;
 }
 
-.player-header {
-    width: 100%;
+.list-entry.enemy {
+    border-left: 3px solid #8f2231;
+}
 
+.list-entry.dragging {
+    opacity: 0.4;
+}
+
+/* Where a dragged entry will land */
+.list-entry.drop-before {
+    box-shadow: 0 -3px 0 var(--accent);
+}
+
+.list-entry.drop-after {
+    box-shadow: 0 3px 0 var(--accent);
+}
+
+.entry-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-
-    margin-bottom: 10px;
-    padding: 0;
-
-    border: none;
-
-    background: none;
-
-    text-align: left;
+    gap: 6px;
 }
 
-.player-header:hover {
-    background: none;
+.list-entry > * + * {
+    margin-top: 8px;
 }
 
-.player-header:hover .player-name {
-    text-decoration: underline;
+.drag-handle {
+    flex-shrink: 0;
+
+    padding: 0 2px;
+
+    color: var(--muted);
+
+    cursor: grab;
+
+    font-size: 14px;
+    letter-spacing: -2px;
+    user-select: none;
+}
+
+.entry-header .initiative-input {
+    flex-shrink: 0;
+
+    width: 46px;
+
+    padding: 3px 4px;
+
+    text-align: center;
+}
+
+.initiative-value {
+    flex-shrink: 0;
+
+    min-width: 28px;
+
+    padding: 2px 6px;
+
+    border-radius: 6px;
+
+    background: var(--panel-2);
+
+    text-align: center;
+    font-weight: 700;
 }
 
 .player-dot {
@@ -525,16 +786,104 @@ body.panel-open #playersPanel {
     border-radius: 50%;
 }
 
-.player-name {
+.list-entry.enemy .player-dot {
+    background: #8f2231;
+}
+
+.entry-name {
     flex: 1;
     min-width: 0;
+
+    padding: 0;
 
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 
-    font-size: 16px;
+    border: none;
+
+    background: none;
+
+    text-align: left;
+    font-size: 15px;
     font-weight: 700;
+}
+
+.entry-name:hover {
+    background: none;
+    text-decoration: underline;
+}
+
+.name-input {
+    flex: 1;
+    min-width: 0;
+
+    padding: 3px 6px;
+}
+
+.entry-icon-button {
+    flex-shrink: 0;
+
+    width: 26px;
+    height: 26px;
+
+    padding: 0;
+
+    border: none;
+
+    background: none;
+
+    color: var(--muted);
+}
+
+.entry-icon-button:hover {
+    background: var(--panel-2);
+    color: var(--text);
+}
+
+.details-toggle {
+    transition: transform 0.15s;
+}
+
+.list-entry.collapsed .details-toggle {
+    transform: rotate(-90deg);
+}
+
+.list-entry.collapsed .entry-details {
+    display: none;
+}
+
+/* DM: an enemy's health */
+.enemy-hp-controls {
+    display: grid;
+    grid-template-columns: 52px 1fr 1fr auto;
+    gap: 6px;
+
+    align-items: center;
+
+    margin-top: 8px;
+}
+
+.enemy-hp-controls .modal-input {
+    padding: 4px 6px;
+}
+
+.enemy-hp-controls button {
+    padding: 5px 4px;
+
+    font-size: 13px;
+}
+
+.enemy-hp-controls label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    font-size: 12px;
+}
+
+.enemy-hp-controls label .modal-input {
+    width: 52px;
 }
 
 .health-bar {
@@ -675,4 +1024,350 @@ body.panel-open #playersPanel {
     :root {
         --panel-width: 100vw;
     }
+}
+
+/* =========================================================
+   NOTES: side buttons, library search, floating windows
+   ========================================================= */
+
+#sideButtons {
+    position: fixed;
+
+    top: 76px;
+    left: 16px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    z-index: 5;
+}
+
+.side-button {
+    width: 48px;
+    height: 48px;
+
+    display: grid;
+    place-items: center;
+
+    padding: 0;
+
+    border-radius: 50%;
+
+    background: var(--panel);
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.side-button svg {
+    width: 24px;
+    height: 24px;
+
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* The DM's quick search, next to the Library button */
+#librarySearch {
+    position: fixed;
+
+    top: 134px;
+    left: 76px;
+
+    width: min(360px, calc(100vw - 92px));
+    max-height: min(480px, calc(100vh - 150px));
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    padding: 10px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+
+    z-index: 15;
+}
+
+#librarySearch.hidden {
+    display: none;
+}
+
+#libraryResults {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    overflow-y: auto;
+}
+
+.library-result {
+    padding: 7px 10px;
+
+    border: none;
+    border-radius: 7px;
+
+    background: none;
+
+    text-align: left;
+}
+
+.library-result.selected,
+.library-result:hover {
+    background: var(--panel-2);
+}
+
+#libraryEmpty {
+    margin: 6px 4px;
+
+    font-size: 14px;
+}
+
+#libraryFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    padding-top: 8px;
+
+    border-top: 1px solid var(--border);
+
+    font-size: 13px;
+}
+
+#libraryFooter button {
+    padding: 5px 10px;
+
+    font-size: 13px;
+}
+
+/* A window you can drag by its title bar, resize from the corner and close (see windows.js) */
+.floating-window {
+    position: fixed;
+
+    min-width: 240px;
+    min-height: 140px;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+    resize: both;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
+
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+}
+
+.floating-title-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 6px 6px 6px 14px;
+
+    background: var(--panel-2);
+
+    border-bottom: 1px solid var(--border);
+
+    cursor: move;
+    user-select: none;
+}
+
+.floating-title {
+    flex: 1;
+    min-width: 0;
+
+    margin: 0;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 15px;
+}
+
+.floating-close {
+    width: 28px;
+    height: 28px;
+
+    padding: 0;
+
+    border: none;
+
+    background: none;
+
+    color: var(--muted);
+
+    font-size: 20px;
+    line-height: 1;
+}
+
+.floating-close:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.floating-body {
+    flex: 1;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: auto;
+}
+
+/* Everyone's own notes */
+.my-notes-text {
+    flex: 1;
+
+    padding: 12px 14px;
+
+    border: none;
+
+    background: none;
+
+    color: var(--text);
+
+    font: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+
+    resize: none;
+}
+
+.my-notes-text:focus {
+    outline: none;
+}
+
+/* A note from the DM's library */
+.note-content {
+    padding: 4px 16px 14px;
+
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.note-content h3,
+.note-content h4,
+.note-content h5 {
+    margin: 14px 0 4px;
+
+    color: var(--accent-hover);
+
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.note-content p {
+    margin: 8px 0;
+}
+
+.note-content ul {
+    margin: 6px 0;
+    padding-left: 20px;
+}
+
+/* A table in a note */
+.note-table {
+    margin: 10px 0;
+
+    overflow-x: auto;
+}
+
+.note-table table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 13px;
+}
+
+.note-table th,
+.note-table td {
+    padding: 6px 8px;
+
+    border: 1px solid var(--border);
+
+    text-align: left;
+    vertical-align: top;
+}
+
+.note-table th {
+    background: var(--panel-2);
+
+    color: var(--accent-hover);
+
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* The die column stays narrow */
+.note-table th:first-child,
+.note-table td:first-child {
+    width: 1%;
+
+    white-space: nowrap;
+}
+
+.note-table tr.rolled td {
+    background: rgba(157, 124, 255, 0.22);
+}
+
+.note-table-roll {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    margin-bottom: 6px;
+}
+
+.note-table-roll button {
+    padding: 4px 12px;
+
+    font-size: 13px;
+}
+
+.note-link {
+    display: inline;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 0;
+
+    background: none;
+
+    color: var(--accent-hover);
+
+    font: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(176, 148, 255, 0.5);
+    text-underline-offset: 2px;
+}
+
+button.note-link:hover {
+    background: none;
+    color: #fff;
+}
+
+.note-link.missing {
+    color: var(--muted);
+    text-decoration-style: dotted;
+
+    cursor: help;
 }
