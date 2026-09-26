@@ -19,6 +19,9 @@ import {
     renderDrawings,
     addStroke,
     removeStrokes,
+    renderNoteMarkers,
+    setNoteMarkersVisible,
+    areNoteMarkersVisible,
     renderDoors,
     setDoorsVisible,
     areDoorsVisible
@@ -28,13 +31,14 @@ import { renderOverview } from "./overview.js";
 import { readCharacterSummary } from "./summary.js";
 import { loadStoredMap, importMapFile } from "./mapStore.js";
 import { Fog } from "./fog.js";
-import { setLibraryAvailable } from "./notes.js";
+import { setLibraryAvailable, pickNote, openNote } from "./notes.js";
 import { STATE_STORAGE_KEY, TILE_BOARD_STORAGE_KEY } from "../state.js";
 
 const PLAYER_ID_KEY = "spellMap:playerId";
 const PLAYER_NAME_KEY = "spellMap:name";
 const LAST_ROOM_KEY = "spellMap:lastRoom";
 const SHOW_DOORS_KEY = "spellMap:showDoors";
+const SHOW_NOTE_MARKERS_KEY = "spellMap:showNoteMarkers";
 
 const DEFAULT_ENEMY_HP = 10;
 
@@ -223,6 +227,18 @@ $("toggleDoors").addEventListener("click", () => {
 setDoorsVisible(storageGet(SHOW_DOORS_KEY) === "1");
 $("toggleDoors").classList.toggle("primary", areDoorsVisible());
 
+// DM: the note shortcuts on the map
+$("toggleNoteMarkers").addEventListener("click", () => {
+    const visible = !areNoteMarkersVisible();
+
+    setNoteMarkersVisible(visible);
+    storageSet(SHOW_NOTE_MARKERS_KEY, visible ? "1" : "0");
+    $("toggleNoteMarkers").classList.toggle("primary", visible);
+});
+
+setNoteMarkersVisible(storageGet(SHOW_NOTE_MARKERS_KEY) !== "0");
+$("toggleNoteMarkers").classList.toggle("primary", areNoteMarkersVisible());
+
 // Players: your character sheet (in another tab) changed or your letter tiles moved, so tell the DM
 window.addEventListener("storage", event => {
     const relevant = event.key === STATE_STORAGE_KEY || event.key === TILE_BOARD_STORAGE_KEY;
@@ -246,7 +262,8 @@ const HINTS = {
     enemy: "Click a square to place an enemy · Hover an enemy for × to remove it",
     draw: "Drag to draw · Everyone sees drawings, even over hidden squares",
     erase: "Drag over lines or doors to erase them",
-    door: "Drag along a grid line to add a door (hidden from players) · Hover a door and click the eye to show or hide it"
+    door: "Drag along a grid line to add a door (hidden from players) · Hover a door and click the eye to show or hide it",
+    note: "Click a spot, then pick the note it opens · Hover a shortcut for × to remove it"
 };
 
 let activeTool = null;
@@ -269,9 +286,13 @@ function selectTool(tool) {
 
     $("drawOptions").classList.toggle("hidden", !drawing);
 
-    // Doors need to be visible to add or erase them
+    // Doors and note shortcuts need to be visible to add (or erase) them
     if ((tool === "door" || tool === "erase") && !areDoorsVisible()) {
         $("toggleDoors").click();
+    }
+
+    if (tool === "note" && !areNoteMarkersVisible()) {
+        $("toggleNoteMarkers").click();
     }
     $("mapHint").textContent = HINTS[tool ?? "none"];
 }
@@ -405,6 +426,42 @@ function sendShared(connection = null) {
         type: "doors",
         doors: dmDoors().filter(doorVisible).map(({ a, b }) => ({ a, b }))
     }, connection);
+}
+
+/*
+ * =========================================================
+ * DM: NOTE SHORTCUTS (never sent to players)
+ * =========================================================
+ */
+
+function notePlaced(x, y) {
+    if (!room || !isDM) {
+        return;
+    }
+
+    pickNote(title => {
+        room.game.noteMarkers.push({ id: newId(), x: Math.round(x), y: Math.round(y), title });
+        room.save();
+        renderNoteMarkers(room.game.noteMarkers);
+    });
+}
+
+function noteOpened(id) {
+    const marker = room?.game.noteMarkers.find(other => other.id === id);
+
+    if (marker) {
+        openNote(marker.title);
+    }
+}
+
+function noteRemoved(id) {
+    if (!room) {
+        return;
+    }
+
+    room.game.noteMarkers = room.game.noteMarkers.filter(marker => marker.id !== id);
+    room.save();
+    renderNoteMarkers(room.game.noteMarkers);
 }
 
 function doorsChanged() {
@@ -663,6 +720,7 @@ function startDMMap() {
     game.turnOrder ??= [];
     game.initiative ??= {};
     game.doors ??= [];
+    game.noteMarkers ??= [];
     delete game.secretDoors; // from when doors came from the map file
 
     // Enemies saved before they had names and health
@@ -677,6 +735,7 @@ function startDMMap() {
     renderEnemies(game.enemies);
     renderDrawings(game.drawings);
     renderDoors(dmDoors());
+    renderNoteMarkers(game.noteMarkers);
     renderList();
 
     // Each picture goes to everyone as soon as it's ready, one message each (they can be a few hundred KB)
@@ -723,7 +782,10 @@ initMapView({
     strokeDrawn,
     erased,
     doorDrawn,
-    doorClicked
+    doorClicked,
+    notePlaced,
+    noteOpened,
+    noteRemoved
 });
 
 // The map view has applied the saved grid setting by now

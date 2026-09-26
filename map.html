@@ -20,7 +20,7 @@
                 <div id="mapLayer"></div>
                 <!-- DM: dims the squares players can't see -->
                 <canvas id="fogCanvas" width="0" height="0"></canvas>
-                <div id="gridOverlay"></div>
+                <svg id="gridLayer" width="1" height="1" aria-hidden="true"><path id="gridPath" /></svg>
                 <!-- The DM's drawings -->
                 <svg id="drawLayer" width="1" height="1" aria-hidden="true"></svg>
                 <!-- Doors (shown with the Doors button) -->
@@ -28,6 +28,8 @@
                 <div id="selectionBox" class="hidden"></div>
                 <!-- DM: an eye button on each door -->
                 <div id="doorHandles"></div>
+                <!-- DM: shortcuts to notes (shown with the Notes button) -->
+                <div id="noteMarkers"></div>
                 <div id="tokenLayer"></div>
                 <svg id="rulerLayer" width="1" height="1" aria-hidden="true"></svg>
                 <div id="rulerLabel" class="hidden"></div>
@@ -88,6 +90,8 @@
                 <button data-tool="enemy" title="Click a square to place an enemy">Enemy</button>
                 <button data-tool="draw" title="Draw lines everyone can see (the eraser is with the colours)">Draw</button>
                 <button data-tool="door" title="Drag along the grid to add a door">Door</button>
+                <button data-tool="note" title="Click a spot to add a shortcut to one of your notes">Note</button>
+                <button id="toggleNoteMarkers" title="Show or hide your note shortcuts">Notes</button>
 
                 <div id="drawOptions" class="hidden">
                     <div id="colorSwatches"></div>

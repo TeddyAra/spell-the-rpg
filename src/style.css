@@ -182,7 +182,7 @@ button:disabled {
     left: 18px;
     top: 96px;
 
-    width: 280px;
+    width: 310px;
 
     /* On short screens the menu scrolls rather than being cut off */
     max-height: calc(100vh - 96px);
@@ -419,6 +419,13 @@ button:disabled {
 
 #characterSchoolGrid .modal-element {
     margin: 0;
+}
+
+/* The Passion school's name, typed by the player, in place of a label */
+.school-name-input {
+    width: calc(100% - 8px);
+
+    padding: 5px 8px;
 }
 
 .spell-slot-settings {
@@ -911,7 +918,7 @@ button:disabled {
     left: 18px;
     bottom: 20px;
 
-    width: 280px;
+    width: 310px;
 
     border-color: var(--accent);
 

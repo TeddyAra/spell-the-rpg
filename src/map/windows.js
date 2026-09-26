@@ -4,6 +4,9 @@ import { element } from "../dom.js";
  * Floating windows on the map page: drag them by the title bar, resize them from
  * the bottom-right corner, close them with ×. Clicking a window brings it to the front.
  * Windows with `remember` keep their place and size between visits.
+ *
+ * All windows live in one layer, so however many times they are brought to the
+ * front, they stay under popups like the library search and the lobby.
  */
 
 const MIN_WIDTH = 240;
@@ -11,6 +14,10 @@ const MIN_HEIGHT = 140;
 const TITLE_BAR_VISIBLE = 40; // pixels of a window that always stay on screen
 
 const openWindows = new Map(); // id → window element
+
+const windowLayer = document.body.appendChild(element("div"));
+
+windowLayer.id = "windowLayer";
 let topZ = 10;
 let cascade = 0;
 
@@ -118,7 +125,7 @@ export function openWindow({ id, title, content, width = 380, height = 320, reme
     win.style.width = `${Math.max(MIN_WIDTH, saved?.width ?? width)}px`;
     win.style.height = `${Math.max(MIN_HEIGHT, saved?.height ?? height)}px`;
 
-    document.body.appendChild(win);
+    windowLayer.appendChild(win);
     keepOnScreen(win);
     bringToFront(win);
     openWindows.set(id, win);

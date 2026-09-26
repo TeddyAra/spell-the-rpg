@@ -5,7 +5,8 @@ import {
     TILE_BOARD_STORAGE_KEY,
     effectiveMaxHealth,
     effectiveSchoolLevel,
-    effectiveSlotLevel
+    effectiveSlotLevel,
+    schoolName
 } from "../state.js";
 import { itemName } from "../items.js";
 import { findWords } from "../words.js";
@@ -48,6 +49,9 @@ export function readCharacterSummary() {
         schools: Object.fromEntries(
             MAGIC_SCHOOLS.map(school => [school, effectiveSchoolLevel(school)])
         ),
+
+        // The player's own name for the Passion school
+        schoolNames: Object.fromEntries(MAGIC_SCHOOLS.map(school => [school, schoolName(school)])),
 
         spellSlots: state.spellSlots
             .filter(slot => slot.level > 0)

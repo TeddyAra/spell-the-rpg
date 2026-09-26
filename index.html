@@ -98,7 +98,7 @@
                         </button>
 
                         <button id="passionButton" class="roll-button">
-                            <span>Passion</span>
+                            <span id="passionName">Passion</span>
                             <span id="passionDisplay">6</span>
                         </button>
 
@@ -336,8 +336,9 @@
                     </div>
 
                     <div class="modal-element">
-                        <label for="passionInput">Passion</label>
-                        <input class="modal-input" id="passionInput" type="number" value="6" disabled>
+                        <!-- Players name the Passion school themselves -->
+                        <input class="modal-input school-name-input" id="passionNameInput" type="text" maxlength="20" placeholder="Passion" aria-label="Name of the Passion school" title="Name this school" spellcheck="false">
+                        <input class="modal-input" id="passionInput" type="number" value="6" disabled aria-label="Passion level">
                     </div>
 
                     <div class="modal-element">

@@ -43,8 +43,22 @@ export const state = {
     temporaryHealth: 0,
 
     // Entries: { id, code, variant?, count?, active?, turns? } — see items.js
-    inventory: []
+    inventory: [],
+
+    // Players name the Passion school themselves
+    passionName: ""
 };
+
+const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);
+
+/* A school's name as the player sees it ("Passion" can be renamed). */
+export function schoolName(school) {
+    if (school === "passion") {
+        return state.passionName?.trim() || "Passion";
+    }
+
+    return capitalize(school);
+}
 
 /*
  * =========================================================

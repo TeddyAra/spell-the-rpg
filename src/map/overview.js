@@ -108,7 +108,9 @@ function playerDetails(summary) {
     for (const school of MAGIC_SCHOOLS) {
         const level = summary.schools?.[school] ?? 0;
 
-        schools.append(chip(`${capitalize(school)} ${level}`, level === 0 ? "muted" : ""));
+        const name = summary.schoolNames?.[school] || capitalize(school);
+
+        schools.append(chip(`${name} ${level}`, level === 0 ? "muted" : ""));
     }
 
     details.append(section("Schools", schools));

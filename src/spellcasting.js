@@ -1,5 +1,5 @@
 import { $, show, hide, renderDice } from "./dom.js";
-import { state, MAGIC_SCHOOLS, isItemActive, effectiveSchoolLevel } from "./state.js";
+import { state, MAGIC_SCHOOLS, isItemActive, effectiveSchoolLevel, schoolName } from "./state.js";
 import { rollDice, rollPercentiles } from "./dice.js";
 import { spawnScrabbleLetters, selectTilesWithBox, letterScore } from "./tiles.js";
 import { showInfoResult } from "./results.js";
@@ -86,6 +86,8 @@ async function rollSpellDice(count, mode) {
 
 /* Updates the school buttons (Red Gem Ring) and swaps them out for the Green Gem Bracelet. */
 export function renderSpellMenu() {
+    $("passionName").textContent = schoolName("passion");
+
     for (const school of MAGIC_SCHOOLS) {
         const level = effectiveSchoolLevel(school);
         const button = $(`${school}Button`);

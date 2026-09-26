@@ -116,6 +116,20 @@ function matchingNotes(query) {
     return [...inTitle.sort((a, b) => a.title.localeCompare(b.title)), ...inText];
 }
 
+// Set while the search is picking a note for a shortcut on the map (see pickNote)
+let onPicked = null;
+
+function choose(title) {
+    if (onPicked) {
+        const picked = onPicked;
+
+        closeSearch();
+        picked(findNote(title).title);
+    } else {
+        openNote(title);
+    }
+}
+
 function renderResults() {
     const notes = matchingNotes(searchInput.value).slice(0, MAX_RESULTS);
 
@@ -123,7 +137,7 @@ function renderResults() {
         const item = element("button", "library-result", note.title);
 
         item.classList.toggle("selected", index === 0);
-        item.addEventListener("click", () => openNote(note.title));
+        item.addEventListener("click", () => choose(note.title));
 
         return item;
     }));
@@ -135,16 +149,28 @@ function renderResults() {
 function openSearch() {
     show(search);
     searchInput.value = "";
+    searchInput.placeholder = onPicked ? "Pick a note for this spot…" : "Search your notes…";
     renderResults();
     searchInput.focus();
 }
 
 function closeSearch() {
     hide(search);
+    onPicked = null;
+}
+
+/* Opens the search to pick a note; picked(title) is called with the choice. */
+export function pickNote(picked) {
+    onPicked = picked;
+    openSearch();
+
+    // This is opened by a click on the map, which moves the focus there once the click is done
+    setTimeout(() => searchInput.focus());
 }
 
 $("libraryButton").addEventListener("click", () => {
     if (search.classList.contains("hidden")) {
+        onPicked = null;
         openSearch();
     } else {
         closeSearch();
@@ -174,7 +200,10 @@ searchInput.addEventListener("keydown", event => {
 
 // It's a quick search: clicking anywhere else closes it
 document.addEventListener("pointerdown", event => {
-    if (!search.classList.contains("hidden") && !search.contains(event.target) && !event.target.closest("#libraryButton")) {
+    // (while picking a note for a shortcut, the click on the map that opened the search doesn't count)
+    const pickingOnMap = onPicked && event.target.closest("#mapViewport");
+
+    if (!search.classList.contains("hidden") && !search.contains(event.target) && !event.target.closest("#libraryButton") && !pickingOnMap) {
         closeSearch();
     }
 });

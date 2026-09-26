@@ -13,7 +13,8 @@ import Peer from "peerjs";
  *     mapName, revealed: [grid square numbers], coordinates,
  *     enemies: { [id]: { x, y, number, name, hp, maxHp } }, drawings: [{ id, color, width, points }],
  *     turnOrder: ["player:<id>" | "enemy:<id>", ...], initiative: { [key]: number },
- *     doors: [{ id, a: { x, y }, b: { x, y }, visible }] (drawn by the DM, ends in grid squares) }
+ *     doors: [{ id, a: { x, y }, b: { x, y }, visible }] (drawn by the DM, ends in grid squares),
+ *     noteMarkers: [{ id, x, y, title }] (the DM's shortcuts to notes; never sent to players) }
  *
  * Only the DM gets the full character summaries. Players are sent names,
  * health and token positions only (see publicPlayer), so the rest can't be

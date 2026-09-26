@@ -36,9 +36,11 @@ const viewport = $("mapViewport");
 const world = $("mapWorld");
 const mapLayer = $("mapLayer");
 const fogCanvas = $("fogCanvas");
+const gridPath = $("gridPath");
 const drawLayer = $("drawLayer");
 const doorLayer = $("doorLayer");
 const doorHandles = $("doorHandles");
+const noteMarkerLayer = $("noteMarkers");
 const rulerLayer = $("rulerLayer");
 const rulerLabel = $("rulerLabel");
 const selectionBox = $("selectionBox");
@@ -51,7 +53,7 @@ let minZoom = PLAYER_MIN_ZOOM;
 let mapSize = null;
 let gridSize = 128;
 
-// "ruler" (everyone), DM tools "reveal" | "hide" | "enemy" | "draw" | "erase" | "door", or null (just move around)
+// "ruler" (everyone), DM tools "reveal" | "hide" | "enemy" | "draw" | "erase" | "door" | "note", or null (just move around)
 let tool = null;
 let drawColor = "#ffffff";
 let canEditEnemies = false;
@@ -69,7 +71,10 @@ let callbacks = {
     strokeDrawn() {},    // ({ color, width, points }) DM finished a line
     erased() {},         // (x, y, radius)            DM dragged the eraser here
     doorDrawn() {},      // (a, b)                    DM drew a door (ends in grid squares)
-    doorClicked() {}     // (id)                      DM clicked a door (to show / hide it for players)
+    doorClicked() {},    // (id)                      DM clicked a door (to show / hide it for players)
+    notePlaced() {},     // (x, y)                    DM clicked with the note tool
+    noteOpened() {},     // (id)                      DM clicked a note shortcut
+    noteRemoved() {}     // (id)                      DM clicked a note shortcut's ×
 };
 
 /*
@@ -260,6 +265,11 @@ function startTool(event) {
             break;
         }
 
+        case "note":
+            callbacks.notePlaced(point.x, point.y);
+            gesture = null;
+            break;
+
         case "enemy":
             callbacks.enemyPlaced(snapToGrid(point.x), snapToGrid(point.y));
             gesture = null;
@@ -300,6 +310,19 @@ viewport.addEventListener("pointerdown", event => {
 
     if (remove && canEditEnemies && (!isMouse || event.button === 0)) {
         callbacks.enemyRemoved(remove.closest(".token").dataset.id);
+
+        return;
+    }
+
+    // DM: a note shortcut opens its note (or the × removes it). While another tool is in use, the tool comes first.
+    const marker = event.target.closest(".note-marker");
+
+    if (marker && (!tool || tool === "note") && (!isMouse || event.button === 0)) {
+        if (event.target.closest(".note-marker-remove")) {
+            callbacks.noteRemoved(marker.dataset.id);
+        } else {
+            callbacks.noteOpened(marker.dataset.id);
+        }
 
         return;
     }
@@ -687,6 +710,42 @@ export function setDoorsVisible(visible) {
     world.classList.toggle("show-doors", visible);
 }
 
+/*
+ * =========================================================
+ * NOTE SHORTCUTS (DM): buttons on the map that open a note
+ * =========================================================
+ */
+
+const BOOK_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg>`;
+
+/* markers: [{ id, x, y, title }] in map pixels */
+export function renderNoteMarkers(markers) {
+    noteMarkerLayer.replaceChildren(...markers.map(marker => {
+        const button = element("div", "note-marker");
+        const remove = element("button", "note-marker-remove", "×");
+
+        button.dataset.id = marker.id;
+        button.style.left = `${marker.x}px`;
+        button.style.top = `${marker.y}px`;
+        button.title = `Open "${marker.title}"`;
+        button.innerHTML = BOOK_ICON;
+        button.append(element("span", "note-marker-title", marker.title), remove);
+
+        remove.title = "Remove this shortcut";
+        remove.setAttribute("aria-label", `Remove the shortcut to ${marker.title}`);
+
+        return button;
+    }));
+}
+
+export function setNoteMarkersVisible(visible) {
+    world.classList.toggle("show-notes", visible);
+}
+
+export function areNoteMarkersVisible() {
+    return world.classList.contains("show-notes");
+}
+
 export function areDoorsVisible() {
     return world.classList.contains("show-doors");
 }
@@ -728,6 +787,7 @@ export function showDMMap(map) {
 
     minZoom = fitScale() / 2;
     fitMap();
+    renderGrid();
 }
 
 /* Dims the squares players can't see (DM). fog: see fog.js */
@@ -758,9 +818,10 @@ export function renderFog(fog) {
  */
 
 export function setGridSize(size) {
-    if (size > 0) {
+    if (size > 0 && size !== gridSize) {
         gridSize = size;
         world.style.setProperty("--grid-size", `${gridSize}px`);
+        renderGrid();
     }
 }
 
@@ -774,6 +835,33 @@ function removeBlock(key) {
     }
 }
 
+/* Players: which grid squares a picture shows ("x,y"), read from its transparency. */
+async function squaresInPicture(block, blob) {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    context.drawImage(bitmap, 0, 0);
+    bitmap.close();
+
+    const squares = [];
+
+    for (let y = 0; y < block.height; y += gridSize) {
+        for (let x = 0; x < block.width; x += gridSize) {
+            const middleX = Math.min(x + gridSize / 2, block.width - 1);
+            const middleY = Math.min(y + gridSize / 2, block.height - 1);
+
+            if (context.getImageData(middleX, middleY, 1, 1).data[3] > 0) {
+                squares.push(`${Math.round((block.x + x) / gridSize)},${Math.round((block.y + y) / gridSize)}`);
+            }
+        }
+    }
+
+    return squares;
+}
+
 /* Revealed parts of the map arrived from the DM (players). */
 export function showBlocks(received) {
     for (const block of received) {
@@ -785,31 +873,41 @@ export function showBlocks(received) {
         removeBlock(block.key);
 
         if (!block.data) {
+            renderGrid();
             continue; // everything in it was hidden again
         }
 
-        const url = URL.createObjectURL(new Blob([block.data], { type: block.type || "image/webp" }));
+        const blob = new Blob([block.data], { type: block.type || "image/webp" });
+        const url = URL.createObjectURL(blob);
         const wrapper = element("div", "map-block");
         const image = element("img");
-        const grid = element("div", "block-grid");
 
         image.src = url;
         image.alt = "";
         image.draggable = false;
 
-        // The grid is only drawn over revealed squares: the picture is its mask
-        grid.style.maskImage = `url("${url}")`;
-        grid.style.webkitMaskImage = `url("${url}")`;
-
         wrapper.style.left = `${block.x}px`;
         wrapper.style.top = `${block.y}px`;
         wrapper.style.width = `${block.width}px`;
         wrapper.style.height = `${block.height}px`;
-        wrapper.append(image, grid);
+        wrapper.append(image);
 
         mapLayer.appendChild(wrapper);
-        blocks.set(block.key, { element: wrapper, url, version: block.version ?? 0 });
+
+        const entry = { element: wrapper, url, version: block.version ?? 0, squares: [] };
+
+        blocks.set(block.key, entry);
+
+        // The grid is only drawn over revealed squares
+        squaresInPicture(block, blob).then(squares => {
+            if (blocks.get(block.key) === entry) {
+                entry.squares = squares;
+                renderGrid();
+            }
+        });
     }
+
+    renderGrid();
 }
 
 /* Removes whatever map is shown (leaving a room, or before the DM sends a fresh copy). */
@@ -832,11 +930,14 @@ export function clearMap() {
     renderDrawings([]);
     renderEnemies({});
     renderDoors([]);
+    renderNoteMarkers([]);
     hideRuler();
 
     mapSize = null;
     minZoom = PLAYER_MIN_ZOOM;
     canEditEnemies = false;
+
+    renderGrid();
 }
 
 /*
@@ -878,6 +979,47 @@ export function renderDrawings(list) {
  */
 
 const GRID_PREFERENCE_KEY = "spellMap:showGrid";
+
+/*
+ * The grid is drawn as lines that are always exactly one screen pixel wide,
+ * whatever the zoom (a scaled-up pattern can end up between pixels and vanish).
+ * The DM gets it over the whole map; players only around the squares they can see.
+ */
+function renderGrid() {
+    const g = gridSize;
+    let path = "";
+
+    if (mapSize) {
+        const columns = Math.ceil(mapSize.width / g);
+        const rows = Math.ceil(mapSize.height / g);
+
+        for (let x = 0; x <= columns; x++) {
+            path += `M${x * g} 0V${rows * g}`;
+        }
+
+        for (let y = 0; y <= rows; y++) {
+            path += `M0 ${y * g}H${columns * g}`;
+        }
+    } else {
+        // Each edge once, so shared edges aren't drawn twice (and darker)
+        const squares = new Set([...blocks.values()].flatMap(block => block.squares));
+        const edges = new Set();
+
+        for (const square of squares) {
+            const [x, y] = square.split(",").map(Number);
+
+            edges.add(`h${x},${y}`).add(`h${x},${y + 1}`).add(`v${x},${y}`).add(`v${x + 1},${y}`);
+        }
+
+        for (const edge of edges) {
+            const [x, y] = edge.slice(1).split(",").map(Number);
+
+            path += edge[0] === "h" ? `M${x * g} ${y * g}h${g}` : `M${x * g} ${y * g}v${g}`;
+        }
+    }
+
+    gridPath.setAttribute("d", path);
+}
 
 export function setGridVisible(visible) {
     world.classList.toggle("show-grid", visible);
@@ -1033,6 +1175,11 @@ export function initMapView(handlers) {
     new ResizeObserver(() => {
         if (mapSize) {
             minZoom = fitScale() / 2;
+
+            // The map was loaded while this tab had no size (e.g. hidden): fit it now
+            if (!(view.scale > 0)) {
+                fitMap();
+            }
         }
     }).observe(viewport);
 }

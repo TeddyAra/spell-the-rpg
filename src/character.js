@@ -112,6 +112,14 @@ onNumberInput(maxHPInput, 1, value => {
 
 const acInput = $("acInput");
 const dexInput = $("dexInput");
+const passionNameInput = $("passionNameInput");
+
+passionNameInput.addEventListener("input", () => {
+    state.passionName = passionNameInput.value.slice(0, 20);
+
+    renderSpellMenu();
+    saveState();
+});
 
 function renderStats() {
     $("acDisplay").textContent = state.ac;
@@ -125,6 +133,11 @@ function renderStats() {
 
     for (const school of MAGIC_SCHOOLS) {
         $(`${school}Input`).value = state.schools[school];
+    }
+
+    // Don't move the cursor while the player is typing the name
+    if (document.activeElement !== passionNameInput) {
+        passionNameInput.value = state.passionName ?? "";
     }
 
     renderSpellMenu();
